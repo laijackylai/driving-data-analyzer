@@ -1,0 +1,43 @@
+# System files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Claude local files
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files (if sensitive)
+data/
+*.csv
+*.json
+*.parquet
+
+# Logs
+*.log
+logs/
