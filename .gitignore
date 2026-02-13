@@ -38,9 +38,10 @@ coverage/
 *.swo
 
 # Data files (if sensitive)
-data/
+/data/
 *.csv
 *.parquet
+!src/lib/data/
 
 # Logs
 *.log
