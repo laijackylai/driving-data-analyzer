@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/Tabs";
 import {
   CategoryIcon,
   CATEGORY_LABELS,
+  CATEGORY_SHORT_LABELS,
   CATEGORY_ORDER,
 } from "@/components/ui/CategoryIcon";
 import { OBD2AnalysisResult } from "@/types";
@@ -21,7 +22,6 @@ import { useSwipe } from "@/hooks/useSwipe";
 export default function DashboardPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<OBD2AnalysisResult | null>(null);
-  const [dataPointsCount, setDataPointsCount] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<(typeof CATEGORY_ORDER)[number]>("motion");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -47,7 +47,6 @@ export default function DashboardPage() {
       }
 
       setResult(data.result);
-      setDataPointsCount(data.dataPointsCount ?? 0);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -201,7 +200,7 @@ export default function DashboardPage() {
               <SummaryChip
                 label="Data pts"
                 value={
-                  <AnimatedNumber value={dataPointsCount} delay={400} />
+                  <AnimatedNumber value={result.dataPointCount} delay={400} />
                 }
               />
             </div>
@@ -229,7 +228,7 @@ export default function DashboardPage() {
                     <TabsTrigger key={cat} value={cat}>
                       <CategoryIcon category={cat} size={16} />
                       <span className="hidden sm:inline">{CATEGORY_LABELS[cat]}</span>
-                      <span className="sm:hidden">{shortLabel(cat)}</span>
+                      <span className="sm:hidden">{CATEGORY_SHORT_LABELS[cat]}</span>
                     </TabsTrigger>
                   ))}
                 </TabsList>
@@ -283,7 +282,7 @@ export default function DashboardPage() {
 
               {/* Desktop: inline footer */}
               <div className="hidden sm:block">
-                <SessionDetailsCard result={result} dataPointsCount={dataPointsCount} />
+                <SessionDetailsCard result={result} />
               </div>
             </div>
           </div>
@@ -348,7 +347,7 @@ export default function DashboardPage() {
                 />
                 <SessionDetailRow
                   label="Data Points Analyzed"
-                  value={dataPointsCount.toLocaleString()}
+                  value={result.dataPointCount.toLocaleString()}
                   mono
                 />
               </div>
@@ -396,10 +395,8 @@ function AnimatedNumber({
 
 function SessionDetailsCard({
   result,
-  dataPointsCount,
 }: {
   result: OBD2AnalysisResult;
-  dataPointsCount: number;
 }) {
   return (
     <Card>
@@ -426,7 +423,7 @@ function SessionDetailsCard({
               Data points analyzed
             </span>
             <p className="mt-1 font-mono text-sapphire-300">
-              {dataPointsCount.toLocaleString()}
+              {result.dataPointCount.toLocaleString()}
             </p>
           </div>
         </div>
@@ -458,17 +455,3 @@ function SessionDetailRow({
   );
 }
 
-function shortLabel(cat: string): string {
-  const map: Record<string, string> = {
-    motion: "Motion",
-    engine: "Engine",
-    fuel: "Fuel",
-    airIntake: "Air",
-    power: "Power",
-    transmission: "Trans",
-    abs: "ABS",
-    awd: "AWD",
-    electrical: "Elec",
-  };
-  return map[cat] ?? cat;
-}

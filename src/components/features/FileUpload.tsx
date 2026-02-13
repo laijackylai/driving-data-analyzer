@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatFileSize } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { formatFileSize } from "@/lib/utils";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -14,7 +13,7 @@ interface FileUploadProps {
 
 export function FileUpload({
   onFileSelect,
-  acceptedFormats = [".csv", ".json"],
+  acceptedFormats = [".csv"],
   maxSizeMB = 10,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);

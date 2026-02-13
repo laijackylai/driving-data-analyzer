@@ -13,21 +13,26 @@ interface MetricCardProps {
   delayIndex?: number;
 }
 
-/**
- * Determine value color based on heuristics.
- * Override with the explicit `color` prop when needed.
- */
-function getValueColor(color?: string): string {
-  switch (color) {
-    case "green":
-      return "text-accent-emerald-400";
-    case "amber":
-      return "text-accent-amber-400";
-    case "red":
-      return "text-accent-red-400";
-    default:
-      return "text-sapphire-100";
-  }
+const VALUE_COLOR_MAP: Record<string, string> = {
+  green: "text-accent-emerald-400",
+  amber: "text-accent-amber-400",
+  red: "text-accent-red-400",
+};
+
+const BORDER_COLOR_MAP: Record<string, string> = {
+  red: "border-accent-red-500/20 hover:border-accent-red-500/30",
+  amber: "border-accent-amber-500/15 hover:border-accent-amber-500/25",
+  default: "border-[rgba(54,112,198,0.12)] hover:border-[rgba(54,112,198,0.22)]",
+};
+
+const ACCENT_EDGE_MAP: Record<string, string> = {
+  red: "bg-accent-red-400/60",
+  amber: "bg-accent-amber-400/40",
+  default: "bg-sapphire-500/0 group-hover:bg-sapphire-500/30",
+};
+
+function getValueColor(color: string): string {
+  return VALUE_COLOR_MAP[color] ?? "text-sapphire-100";
 }
 
 export function MetricCard({
@@ -38,14 +43,17 @@ export function MetricCard({
   color = "default",
   delayIndex = 0,
 }: MetricCardProps) {
-  const formattedValue =
-    value !== null && value !== undefined
-      ? typeof value === "number" && !Number.isInteger(value)
-        ? value.toFixed(2)
-        : value.toString()
-      : "—";
-
   const isNull = value === null || value === undefined;
+
+  let formattedValue: string;
+  if (isNull) {
+    formattedValue = "—";
+  } else if (!Number.isInteger(value)) {
+    formattedValue = value.toFixed(2);
+  } else {
+    formattedValue = value.toString();
+  }
+
   const delayClass = `delay-${Math.min(delayIndex, 8)}`;
 
   return (
@@ -61,11 +69,7 @@ export function MetricCard({
           "hover:bg-sapphire-900/55",
           "hover:shadow-[0_4px_20px_rgba(10,22,40,0.5)]",
           "md:hover:scale-[1.02] md:hover:-translate-y-0.5",
-          color === "red"
-            ? "border-accent-red-500/20 hover:border-accent-red-500/30"
-            : color === "amber"
-              ? "border-accent-amber-500/15 hover:border-accent-amber-500/25"
-              : "border-[rgba(54,112,198,0.12)] hover:border-[rgba(54,112,198,0.22)]"
+          BORDER_COLOR_MAP[color] ?? BORDER_COLOR_MAP.default
         )}
       >
         {/* Pearl edge highlight */}
@@ -114,11 +118,7 @@ export function MetricCard({
         <div
           className={cn(
             "pointer-events-none absolute left-0 top-0 bottom-0 w-[2px] transition-colors duration-300",
-            color === "red"
-              ? "bg-accent-red-400/60"
-              : color === "amber"
-                ? "bg-accent-amber-400/40"
-                : "bg-sapphire-500/0 group-hover:bg-sapphire-500/30"
+            ACCENT_EDGE_MAP[color] ?? ACCENT_EDGE_MAP.default
           )}
           aria-hidden="true"
         />

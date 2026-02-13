@@ -1,16 +1,6 @@
 import { cn } from "@/lib/utils";
 import { MetricCard } from "./MetricCard";
-import type {
-  EngineMetrics,
-  AirIntakeMetrics,
-  FuelMetrics,
-  PowerMetrics,
-  MotionMetrics,
-  TransmissionMetrics,
-  ABSMetrics,
-  AWDMetrics,
-  ElectricalMetrics,
-} from "@/types";
+import type { CategoryMetricsType } from "@/types";
 
 // ── Types ──
 
@@ -335,17 +325,6 @@ const CATEGORY_GROUPS: Record<string, MetricGroup[]> = {
 };
 
 // ── Component ──
-
-type CategoryMetricsType =
-  | EngineMetrics
-  | AirIntakeMetrics
-  | FuelMetrics
-  | PowerMetrics
-  | MotionMetrics
-  | TransmissionMetrics
-  | ABSMetrics
-  | AWDMetrics
-  | ElectricalMetrics;
 
 interface CategoryMetricsProps {
   category: string;

@@ -218,6 +218,19 @@ export interface AnalysisResult {
   };
 }
 
+// ── Category Metrics Union ──
+
+export type CategoryMetricsType =
+  | EngineMetrics
+  | AirIntakeMetrics
+  | FuelMetrics
+  | PowerMetrics
+  | MotionMetrics
+  | TransmissionMetrics
+  | ABSMetrics
+  | AWDMetrics
+  | ElectricalMetrics;
+
 // ── File Upload ──
 
 export interface UploadedFile {

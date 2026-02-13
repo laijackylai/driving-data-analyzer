@@ -52,20 +52,20 @@ export function SafetyGauge({
   // Before mount: show nothing filled. After mount: transition to target.
   const currentOffset = mounted ? targetOffset : arcLength;
 
-  // Score color
-  const scoreColor =
-    clampedScore >= 80
-      ? "text-accent-emerald-400"
-      : clampedScore >= 60
-        ? "text-accent-amber-400"
-        : "text-accent-red-400";
+  // Score color and label
+  let scoreColor: string;
+  let scoreLabel: string;
 
-  const scoreLabel =
-    clampedScore >= 80
-      ? "Excellent"
-      : clampedScore >= 60
-        ? "Fair"
-        : "Needs Improvement";
+  if (clampedScore >= 80) {
+    scoreColor = "text-accent-emerald-400";
+    scoreLabel = "Excellent";
+  } else if (clampedScore >= 60) {
+    scoreColor = "text-accent-amber-400";
+    scoreLabel = "Fair";
+  } else {
+    scoreColor = "text-accent-red-400";
+    scoreLabel = "Needs Improvement";
+  }
 
   // Gradient ID (unique per instance)
   const gradientId = `gauge-gradient-${size}`;

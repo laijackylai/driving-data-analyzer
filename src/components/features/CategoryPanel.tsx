@@ -3,28 +3,7 @@
 import { cn } from "@/lib/utils";
 import { CategoryIcon, CATEGORY_LABELS } from "@/components/ui/CategoryIcon";
 import { CategoryMetrics } from "./CategoryMetrics";
-import type {
-  EngineMetrics,
-  AirIntakeMetrics,
-  FuelMetrics,
-  PowerMetrics,
-  MotionMetrics,
-  TransmissionMetrics,
-  ABSMetrics,
-  AWDMetrics,
-  ElectricalMetrics,
-} from "@/types";
-
-type CategoryMetricsType =
-  | EngineMetrics
-  | AirIntakeMetrics
-  | FuelMetrics
-  | PowerMetrics
-  | MotionMetrics
-  | TransmissionMetrics
-  | ABSMetrics
-  | AWDMetrics
-  | ElectricalMetrics;
+import type { CategoryMetricsType } from "@/types";
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
   motion: "Vehicle speed, distance traveled, and driving behavior patterns",

@@ -148,20 +148,12 @@ export function analyzeMotion(points: OBD2DataPoint[]): MotionMetrics {
     totalDistance = Math.round((lastDist - firstDist) * 100) / 100;
   }
 
-  // Detect harsh braking: acceleration < -0.4g (approx -3.9 m/s²)
+  // Detect harsh braking (< -0.4g) and rapid acceleration (> 0.3g)
   let harshBrakingEvents = 0;
-  for (const a of accelerations) {
-    if (a < -0.4) {
-      harshBrakingEvents++;
-    }
-  }
-
-  // Detect rapid acceleration: acceleration > 0.3g (approx 2.9 m/s²)
   let rapidAccelerationEvents = 0;
   for (const a of accelerations) {
-    if (a > 0.3) {
-      rapidAccelerationEvents++;
-    }
+    if (a < -0.4) harshBrakingEvents++;
+    if (a > 0.3) rapidAccelerationEvents++;
   }
 
   return {

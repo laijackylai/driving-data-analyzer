@@ -162,6 +162,21 @@ export const CATEGORY_LABELS: Record<string, string> = {
 };
 
 /**
+ * Abbreviated category labels for compact mobile display.
+ */
+export const CATEGORY_SHORT_LABELS: Record<string, string> = {
+  motion: "Motion",
+  engine: "Engine",
+  fuel: "Fuel",
+  airIntake: "Air",
+  power: "Power",
+  transmission: "Trans",
+  abs: "ABS",
+  awd: "AWD",
+  electrical: "Elec",
+};
+
+/**
  * Ordered list of category keys (matches the tab order in the design spec).
  */
 export const CATEGORY_ORDER = [

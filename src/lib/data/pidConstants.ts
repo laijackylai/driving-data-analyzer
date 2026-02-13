@@ -351,18 +351,3 @@ export const PID_DISPLAY: Record<string, { label: string; unit: string }> = {};
 for (const [pidName, mapping] of Object.entries(PID_MAP)) {
   PID_DISPLAY[mapping.field] = { label: pidName, unit: mapping.unit };
 }
-
-/**
- * Human-readable category labels for the UI.
- */
-export const CATEGORY_LABELS: Record<CategoryType, string> = {
-  engine: "Engine",
-  airIntake: "Air Intake",
-  fuel: "Fuel System",
-  power: "Power",
-  motion: "Motion",
-  transmission: "Transmission",
-  abs: "ABS/Stability",
-  awd: "AWD",
-  electrical: "Electrical",
-};

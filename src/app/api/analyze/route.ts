@@ -36,23 +36,15 @@ export async function POST(request: NextRequest) {
     // Read file content
     const fileContent = await file.text();
 
-    // Parse OBD2 CSV data
+    // Parse OBD2 CSV data (throws if no valid data found)
     const dataPoints = parseOBD2File(fileContent);
 
-    if (dataPoints.length === 0) {
-      return NextResponse.json(
-        { error: "No valid OBD2 data points found in file" },
-        { status: 400 }
-      );
-    }
-
-    // Analyze data — return full OBD2AnalysisResult for the new dashboard
+    // Analyze data — return full OBD2AnalysisResult for the dashboard
     const result = analyzeOBD2Data(dataPoints);
 
     return NextResponse.json({
       success: true,
       result,
-      dataPointsCount: dataPoints.length,
     });
   } catch (error) {
     console.error("Analysis error:", error);
