@@ -9,11 +9,25 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
       <div
         ref={ref}
         className={cn(
-          "rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950",
+          "relative overflow-hidden rounded-xl",
+          "bg-[rgba(15,34,64,0.55)] backdrop-blur-[16px]",
+          "border border-[rgba(54,112,198,0.15)]",
+          "shadow-[0_4px_16px_rgba(10,22,40,0.5),0_0_0_1px_rgba(54,112,198,0.08),inset_0_1px_0_rgba(184,212,240,0.05)]",
+          "transition-[border-color,box-shadow] duration-200 ease-out",
+          "hover:border-[rgba(90,146,219,0.25)]",
+          "hover:shadow-[0_8px_32px_rgba(10,22,40,0.6),0_0_0_1px_rgba(54,112,198,0.12),inset_0_1px_0_rgba(184,212,240,0.08)]",
           className
         )}
         {...props}
-      />
+      >
+        {/* Inner pearl sheen — top edge highlight */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-[inherit] bg-gradient-to-b from-[rgba(184,212,240,0.04)] to-transparent"
+          aria-hidden="true"
+        />
+        {/* Content sits above the sheen */}
+        <div className="relative">{props.children}</div>
+      </div>
     );
   }
 );
@@ -42,7 +56,7 @@ const CardTitle = forwardRef<
     <h3
       ref={ref}
       className={cn(
-        "text-2xl font-semibold leading-none tracking-tight",
+        "font-display text-2xl font-semibold leading-none tracking-tight text-sapphire-100",
         className
       )}
       {...props}
@@ -59,7 +73,7 @@ const CardDescription = forwardRef<
   return (
     <p
       ref={ref}
-      className={cn("text-sm text-gray-500 dark:text-gray-400", className)}
+      className={cn("text-sm text-sapphire-400", className)}
       {...props}
     />
   );

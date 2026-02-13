@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseCSV, parseJSON, createAnalysisResult } from "@/lib/data/analyzer";
-import { validateFileFormat } from "@/lib/data/validators";
-import { DrivingDataPoint } from "@/types";
+import { parseOBD2File } from "@/lib/data/obd2Parser";
+import { analyzeOBD2Data } from "@/lib/data/obd2Analyzer";
+import { validateFileFormat } from "@/lib/data/obd2Validators";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,11 +24,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file format
+    // Validate file format (CSV only for OBD2)
     const format = validateFileFormat(file.name);
     if (!format) {
       return NextResponse.json(
-        { error: "Invalid file format. Only CSV and JSON are supported." },
+        { error: "Invalid file format. Only OBD2 CSV files (.csv) are supported." },
         { status: 400 }
       );
     }
@@ -36,43 +36,29 @@ export async function POST(request: NextRequest) {
     // Read file content
     const fileContent = await file.text();
 
-    // Parse data based on format
-    let dataPoints: DrivingDataPoint[] = [];
-
-    if (format === "csv") {
-      dataPoints = parseCSV(fileContent);
-    } else if (format === "json") {
-      const parsed = parseJSON(fileContent);
-      if (Array.isArray(parsed)) {
-        dataPoints = parsed;
-      } else {
-        dataPoints = parsed.dataPoints;
-      }
-    }
+    // Parse OBD2 CSV data
+    const dataPoints = parseOBD2File(fileContent);
 
     if (dataPoints.length === 0) {
       return NextResponse.json(
-        { error: "No valid data points found in file" },
+        { error: "No valid OBD2 data points found in file" },
         { status: 400 }
       );
     }
 
-    // Generate session ID
-    const sessionId = `session-${Date.now()}`;
-
-    // Analyze data
-    const analysisResult = createAnalysisResult(sessionId, dataPoints);
+    // Analyze data — return full OBD2AnalysisResult for the new dashboard
+    const result = analyzeOBD2Data(dataPoints);
 
     return NextResponse.json({
       success: true,
-      result: analysisResult,
+      result,
       dataPointsCount: dataPoints.length,
     });
   } catch (error) {
     console.error("Analysis error:", error);
     return NextResponse.json(
       {
-        error: "Failed to analyze data",
+        error: "Failed to analyze OBD2 data",
         details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, DragEvent, ChangeEvent } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { formatFileSize } from "@/lib/utils";
@@ -24,13 +25,11 @@ export function FileUpload({
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
   const validateFile = (file: File): boolean => {
-    // Check file size
     if (file.size > maxSizeBytes) {
       setError(`File size exceeds ${maxSizeMB}MB limit`);
       return false;
     }
 
-    // Check file type
     const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
     if (!acceptedFormats.includes(fileExtension)) {
       setError(`Only ${acceptedFormats.join(", ")} files are accepted`);
@@ -81,13 +80,14 @@ export function FileUpload({
 
   return (
     <Card className="w-full">
-      <CardContent className="p-6">
+      <CardContent className="p-4 sm:p-6">
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+          className={cn(
+            "relative border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-all duration-200",
             isDragging
-              ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-              : "border-gray-300 dark:border-gray-600"
-          }`}
+              ? "border-sapphire-400 bg-sapphire-800/30 shadow-[inset_0_0_30px_rgba(54,112,198,0.08)]"
+              : "border-sapphire-700/40 hover:border-sapphire-600/50"
+          )}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -100,48 +100,61 @@ export function FileUpload({
             className="hidden"
           />
 
-          <div className="flex flex-col items-center gap-4">
-            <svg
-              className="w-16 h-16 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex flex-col items-center gap-3 sm:gap-4">
+            {/* Upload icon */}
+            <div
+              className={cn(
+                "flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-colors duration-200",
+                isDragging
+                  ? "bg-sapphire-700/40 text-sapphire-300"
+                  : "bg-sapphire-800/40 text-sapphire-500"
+              )}
             >
-              <path
+              <svg
+                width="28"
+                height="28"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              />
-            </svg>
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </div>
 
             {selectedFile ? (
-              <div className="text-sm">
-                <p className="font-medium text-gray-900 dark:text-gray-100">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-sapphire-100 truncate max-w-[260px] sm:max-w-none">
                   {selectedFile.name}
                 </p>
-                <p className="text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-mono text-sapphire-400">
                   {formatFileSize(selectedFile.size)}
                 </p>
               </div>
             ) : (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <p className="font-medium">
-                  Drag and drop your file here, or click to browse
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-sapphire-200">
+                  Drag and drop your file here
                 </p>
-                <p className="mt-1">
-                  Supported formats: {acceptedFormats.join(", ")} (max {maxSizeMB}MB)
+                <p className="text-xs text-sapphire-500">
+                  {acceptedFormats.join(", ")} up to {maxSizeMB}MB
                 </p>
               </div>
             )}
 
             {error && (
-              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              <p className="text-xs font-medium text-accent-red-400">{error}</p>
             )}
 
             <Button
               onClick={handleButtonClick}
               variant={selectedFile ? "secondary" : "primary"}
+              size="md"
+              className="min-h-[44px] min-w-[140px]"
             >
               {selectedFile ? "Choose Different File" : "Browse Files"}
             </Button>

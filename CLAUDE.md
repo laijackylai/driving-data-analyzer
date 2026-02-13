@@ -1,95 +1,74 @@
 # Claude Instructions
 
+## Commands
+
+```bash
+npm run dev          # Start dev server (Next.js)
+npm run build        # Production build
+npm start            # Start production server
+npm run lint         # ESLint
+npm run type-check   # TypeScript check (tsc --noEmit)
+```
+
 ## Project Context
 
-This is a driving data analyzer project designed to process and analyze driving behavior data.
+OBD2 driving data analyzer — upload CSV files of OBD2 sensor readings, analyze driving behavior across 9 categories (engine, fuel, power, motion, etc.), and display a safety score dashboard.
 
-## Development Guidelines
-
-### General
-- Keep code modular and well-documented
-- Follow consistent naming conventions
-- Add tests for new features
-- Update documentation as the project evolves
-
-### Next.js Specific
-- Use App Router (not Pages Router)
-- Prefer Server Components by default, use "use client" only when necessary
-- Place client components in separate files
-- Use Next.js built-in optimizations (Image, Font, Metadata)
-
-### TypeScript
-- Enable strict mode in tsconfig.json
-- Define types in `src/types/index.ts`
-- Use type guards for runtime validation
-- Prefer interfaces over types for object shapes
-
-### Tailwind CSS
-- Use utility classes for styling
-- Use the `cn()` utility for conditional classes
-- Define custom colors/spacing in tailwind.config.ts
-- Follow mobile-first responsive design
-
-### Component Structure
-- UI components in `src/components/ui/` should be generic and reusable
-- Feature components in `src/components/features/` can be more specific
-- Export components with named exports
-- Use forwardRef for components that need ref access
+**Stack:** Next.js 16 (App Router), React 19, TypeScript (strict), Tailwind CSS 3
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js App Router pages and routes
-│   ├── api/               # API endpoints (server-side)
-│   │   └── analyze/       # POST endpoint for data analysis
-│   ├── dashboard/         # Dashboard page (client-side)
-│   ├── layout.tsx         # Root layout with metadata
-│   ├── page.tsx           # Home/landing page
-│   └── globals.css        # Global styles with Tailwind directives
-├── components/            # Reusable React components
-│   ├── ui/               # Generic UI components (Button, Card)
-│   └── features/         # Feature-specific components (FileUpload)
-├── lib/                   # Utility functions and business logic
-│   ├── utils.ts          # General utilities (cn, formatters)
-│   └── data/             # Data processing utilities
-│       ├── analyzer.ts   # Analysis algorithms and calculations
-│       └── validators.ts # Input validation and type guards
-├── types/                 # TypeScript type definitions
-│   └── index.ts          # Shared types (DrivingDataPoint, AnalysisResult)
-└── hooks/                 # Custom React hooks
+├── app/
+│   ├── api/analyze/route.ts      # POST endpoint: CSV upload → OBD2AnalysisResult
+│   ├── dashboard/page.tsx        # Client-side dashboard ("use client")
+│   ├── page.tsx                  # Landing page
+│   ├── layout.tsx                # Root layout (Outfit, DM Sans, JetBrains Mono fonts)
+│   └── globals.css               # Tailwind directives + glass-morphism + safe-area utilities
+├── components/
+│   ├── ui/                       # Generic: Button, Card, Tabs, SafetyGauge, CategoryIcon
+│   └── features/                 # Feature: FileUpload, CategoryPanel, CategoryMetrics, MetricCard
+├── lib/
+│   ├── utils.ts                  # cn(), formatFileSize(), formatDuration()
+│   └── data/
+│       ├── obd2Parser.ts         # CSV parsing (splitOBD2Line, parseOBD2CSV)
+│       ├── obd2Analyzer.ts       # Analysis algorithms per category
+│       ├── obd2Validators.ts     # Input validation and type guards
+│       ├── pidConstants.ts       # OBD2 Parameter ID mappings
+│       └── transformers.ts       # Long-form → wide-form data pivoting
+├── hooks/
+│   ├── useCountUp.ts             # Animated number counter
+│   └── useSwipe.ts               # Touch/swipe gesture handler
+└── types/
+    └── index.ts                  # OBD2Reading, OBD2DataPoint, OBD2AnalysisResult, AnalysisResult
 ```
 
-### Technology Stack
+## Key Files
 
-- **Next.js 15**: App Router for modern React Server Components
-- **TypeScript**: Strict mode enabled for type safety
-- **Tailwind CSS**: Utility-first styling
-- **React 19**: Latest React features
+- **API route** (`src/app/api/analyze/route.ts`): Accepts multipart form-data (10MB limit), validates CSV, returns `OBD2AnalysisResult`
+- **Types** (`src/types/index.ts`): All shared interfaces — start here to understand data shapes
+- **PID constants** (`src/lib/data/pidConstants.ts`): Maps OBD2 parameter IDs to names/categories
 
-## Key Considerations
+## Code Style
 
-### Data Privacy
-- All data processing happens client-side or in API routes (no external services)
-- Files are not stored on the server
-- Analysis is performed in-memory
-- No data is persisted without user consent
+- Path alias: `@/*` → `./src/*` for all imports
+- Use `cn()` from `@/lib/utils` for conditional Tailwind classes
+- UI components (`src/components/ui/`) are generic and reusable; feature components can be specific
+- Prefer Server Components; use `"use client"` only when needed (dashboard, interactive components)
+- Define all types in `src/types/index.ts`; use interfaces over type aliases for objects
+- Custom design tokens in `tailwind.config.ts`: sapphire palette, accent colors, glass-morphism shadows
 
-### Performance
-- Use Server Components for initial page loads
-- Client-side processing for file uploads to reduce server load
-- Optimize bundle size with code splitting
-- Use Next.js Image component for optimized images
-- Consider streaming for large datasets in the future
+## Environment
 
-### Accuracy
-- Validate all input data before processing
-- Use type guards to ensure data integrity
-- Handle edge cases (empty files, malformed data)
-- Provide clear error messages to users
+- Copy `.env.example` → `.env.local` for local development
+- No external services — all processing is in-memory, no data persisted
 
-### Next.js Performance Best Practices
-- Use dynamic imports for heavy components
-- Implement proper loading states
-- Cache API responses where appropriate
-- Use React Server Components to reduce client bundle size
+## Gotchas
+
+- **OBD2 CSV format**: Long-form (timestamp, PID name, value, units) — not one-row-per-reading. `splitOBD2Line` handles quoted fields and trailing semicolons
+- **Timestamps are seconds** (Unix float with microsecond precision), not milliseconds
+- **PID-keyed architecture**: Data pivoted from long-form to wide-form (`OBD2DataPoint`) with all PID fields optional
+- **Glass-morphism CSS**: Requires `backdrop-filter` browser support; graceful degradation for older browsers
+- **Safe area insets**: CSS env() variables used for notched mobile devices with fallbacks
+- **Deleted files**: `src/lib/data/analyzer.ts` and `validators.ts` were replaced by `obd2Analyzer.ts`, `obd2Parser.ts`, `obd2Validators.ts`

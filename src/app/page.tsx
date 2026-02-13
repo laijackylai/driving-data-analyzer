@@ -2,66 +2,92 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-8 sm:p-20 bg-gradient-to-b from-white to-gray-50 dark:from-gray-900 dark:to-gray-800">
-      <main className="flex flex-col gap-8 items-center max-w-4xl">
-        <h1 className="text-4xl sm:text-6xl font-bold text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 sm:p-20">
+      <main className="flex flex-col gap-8 items-center max-w-4xl w-full">
+        {/* ── Hero ── */}
+        <div className="flex items-center justify-center w-20 h-20 rounded-3xl bg-sapphire-800/40 border border-sapphire-700/25 mb-2">
+          <svg
+            width="36"
+            height="36"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            className="text-sapphire-400"
+          >
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+            <path d="M12 6v2" />
+            <path d="M16.24 7.76l-1.42 1.42" />
+            <path d="M18 12h-2" />
+            <path d="M12 12l-3.5 3.5" />
+            <circle cx="12" cy="12" r="1" fill="currentColor" />
+          </svg>
+        </div>
+
+        <h1 className="font-display text-3xl sm:text-5xl font-bold text-center text-sapphire-100 tracking-tight">
           Driving Data Analyzer
         </h1>
 
-        <p className="text-lg sm:text-xl text-center text-gray-600 dark:text-gray-300 max-w-2xl">
+        <p className="text-base sm:text-lg text-center text-sapphire-400 max-w-xl leading-relaxed">
           Analyze and visualize driving behavior data with a privacy-first approach.
-          Upload your driving data to get insights on patterns, safety metrics, and performance.
+          Upload your OBD2 data for detailed insights across 9 categories.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl mt-8">
-          <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
-            <h2 className="text-xl font-semibold mb-2">Data Collection</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Upload CSV or JSON files containing your driving data
-            </p>
-          </div>
-
-          <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
-            <h2 className="text-xl font-semibold mb-2">Pattern Analysis</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Identify driving patterns and behaviors automatically
-            </p>
-          </div>
-
-          <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
-            <h2 className="text-xl font-semibold mb-2">Visualization</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              View insights through interactive charts and graphs
-            </p>
-          </div>
-
-          <div className="p-6 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-500 transition-colors">
-            <h2 className="text-xl font-semibold mb-2">Behavior Insights</h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Get actionable insights to improve driving safety
-            </p>
-          </div>
+        {/* ── Feature grid ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl mt-4">
+          <FeatureCard
+            title="Data Collection"
+            description="Upload OBD2 CSV files with 90+ supported PIDs"
+          />
+          <FeatureCard
+            title="Pattern Analysis"
+            description="Identify driving patterns and behaviors automatically"
+          />
+          <FeatureCard
+            title="Safety Scoring"
+            description="Get a composite safety score with actionable insights"
+          />
+          <FeatureCard
+            title="9 Categories"
+            description="Engine, fuel, motion, power, transmission, and more"
+          />
         </div>
 
-        <div className="flex gap-4 mt-8">
+        {/* ── CTA ── */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <Link
             href="/dashboard"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center justify-center min-h-[48px] px-7 bg-sapphire-600 text-sapphire-50 rounded-xl font-semibold font-body text-sm hover:bg-sapphire-500 transition-all duration-200 shadow-[0_1px_3px_rgba(10,22,40,0.4),inset_0_1px_0_rgba(184,212,240,0.1)] hover:shadow-[0_4px_12px_rgba(54,112,198,0.3),inset_0_1px_0_rgba(184,212,240,0.15)]"
           >
             Go to Dashboard
           </Link>
-          <a
-            href="#features"
-            className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-medium hover:border-gray-400 transition-colors"
-          >
-            Learn More
-          </a>
         </div>
       </main>
 
-      <footer className="mt-16 text-sm text-gray-500 dark:text-gray-400">
+      <footer className="mt-16 text-xs text-sapphire-600">
         Built with Next.js, TypeScript, and Tailwind CSS
       </footer>
+    </div>
+  );
+}
+
+function FeatureCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-xl p-5 bg-[rgba(15,34,64,0.4)] backdrop-blur-sm border border-[rgba(54,112,198,0.12)] transition-all duration-200 hover:border-[rgba(54,112,198,0.22)] hover:bg-[rgba(15,34,64,0.55)]">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(184,212,240,0.06)] to-transparent"
+        aria-hidden="true"
+      />
+      <h2 className="font-display text-sm font-semibold text-sapphire-100 mb-1.5">
+        {title}
+      </h2>
+      <p className="text-xs text-sapphire-400 leading-relaxed">{description}</p>
     </div>
   );
 }
