@@ -6,25 +6,30 @@
 # Claude local files
 .claude/
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-*.egg-info/
-dist/
-build/
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Production
+*.log
+
+# Testing
+coverage/
 
 # Environment variables
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # IDE
 .vscode/
@@ -35,9 +40,13 @@ build/
 # Data files (if sensitive)
 data/
 *.csv
-*.json
 *.parquet
 
 # Logs
 *.log
 logs/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+sample-data.csv
