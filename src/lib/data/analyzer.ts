@@ -1,4 +1,33 @@
 import { DrivingDataPoint, DrivingSession, AnalysisResult } from "@/types";
+import { isValidDataPoint } from "./validators";
+
+/**
+ * Split a CSV line respecting quoted fields
+ */
+function splitCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
+}
 
 /**
  * Parse CSV data to driving data points
@@ -9,11 +38,11 @@ export function parseCSV(csvText: string): DrivingDataPoint[] {
     throw new Error("CSV file is empty or invalid");
   }
 
-  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase());
+  const headers = splitCSVLine(lines[0]).map((h) => h.trim().toLowerCase());
   const dataPoints: DrivingDataPoint[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(",");
+    const values = splitCSVLine(lines[i]);
     const point: any = {};
 
     headers.forEach((header, index) => {
@@ -45,11 +74,13 @@ export function parseJSON(jsonText: string): DrivingSession | DrivingDataPoint[]
 
     // Check if it's an array of data points
     if (Array.isArray(data)) {
-      return data as DrivingDataPoint[];
+      const validPoints = data.filter(isValidDataPoint);
+      return validPoints;
     }
 
     // Check if it's a session object
     if (data.dataPoints && Array.isArray(data.dataPoints)) {
+      data.dataPoints = data.dataPoints.filter(isValidDataPoint);
       return data as DrivingSession;
     }
 
@@ -70,17 +101,15 @@ export function analyzeData(dataPoints: DrivingDataPoint[]): AnalysisResult["met
   // Calculate average and max speed
   const speeds = dataPoints.map((p) => p.speed);
   const averageSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
-  const maxSpeed = Math.max(...speeds);
+  const maxSpeed = speeds.reduce((max, s) => (s > max ? s : max), -Infinity);
 
-  // Detect harsh braking events (deceleration > 4 m/s²)
+  // Detect harsh braking events (deceleration > 4 m/s² or brake force > 0.7)
   let harshBrakingEvents = 0;
-  for (let i = 1; i < dataPoints.length; i++) {
-    const prev = dataPoints[i - 1];
-    const curr = dataPoints[i];
-
-    if (prev.acceleration !== undefined && prev.acceleration < -4) {
+  for (const point of dataPoints) {
+    if (point.acceleration !== undefined && point.acceleration < -4) {
       harshBrakingEvents++;
-    } else if (curr.braking !== undefined && curr.braking > 0.7) {
+    }
+    if (point.braking !== undefined && point.braking > 0.7) {
       harshBrakingEvents++;
     }
   }
