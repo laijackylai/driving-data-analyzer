@@ -5,8 +5,8 @@
 Add interactive time-series charts, scatter plots, histograms, and a GPS route map to the OBD2 driving data analyzer dashboard. Charts are organized into 9 tabs with linked brushing (selecting a time range on any chart highlights the corresponding GPS segment and syncs all charts). All thresholds and tooltips are specific to the **2024 Subaru Impreza RS** (2.5L FB25 naturally aspirated, CVT, symmetrical AWD).
 
 ### Libraries
-- **Charts**: `react-plotly.js` + `plotly.js` — rich interactivity (zoom, pan, hover crosshairs, range selection, WebGL for large datasets)
-- **Map**: `react-leaflet` + `leaflet` with OpenStreetMap tiles (CartoDB Dark Matter dark theme, free)
+- **Charts**: `react-plotly.js` + `plotly.js-basic-dist-min` (~1MB, includes scatter, bar, histogram — sufficient for all chart types used). For `scattergl` WebGL traces on large datasets, fall back to full `plotly.js-dist-min` only if basic bundle proves insufficient.
+- **Map**: `react-leaflet` + `leaflet` with OpenStreetMap tiles (CartoDB Dark Matter dark theme, free). **Note**: Leaflet CSS (`leaflet/dist/leaflet.css`) must be imported inside the dynamically-loaded RouteMap component or via a global CSS import to prevent un-styled maps.
 - Both dynamically imported (`next/dynamic`, `ssr: false`) for Next.js compatibility
 
 ### Aesthetic Direction
@@ -42,19 +42,18 @@ to:
 interface ExtendedAnalysisResponse {
   success: true;
   result: OBD2AnalysisResult;          // existing — unchanged
-  timeSeries: TimeSeriesDataPoint[];    // pivoted wide-form data per ~1s bucket
-  gps: GPSDataPoint[];                 // lat/lon/altitude/speed per ~1s bucket
+  timeSeries: OBD2DataPoint[];         // pivoted wide-form data per ~1s bucket
+  gps: GPSDataPoint[];                 // lat/lon/altitude/speed per ~1s bucket (empty array if no GPS data)
   derived: DerivedMetrics;             // new server-side computations
   thresholds: ThresholdConfig;         // 2024 Impreza RS thresholds
 }
 ```
 
+**Note on time-series data**: The `OBD2DataPoint[]` array is already computed by `parseOBD2File()` and passed to `analyzeOBD2Data()`. It is available in the API route handler scope — it is simply not included in the current response. The fix is to return it alongside the analysis result. No new computation needed.
+
 ### New Types (`src/types/index.ts`)
 
 ```ts
-// TimeSeriesDataPoint is the existing OBD2DataPoint — already computed internally
-// by the analyzer but currently discarded. Will be returned in the response.
-
 interface GPSDataPoint {
   timestamp: number;
   lat: number;
@@ -71,21 +70,41 @@ interface DerivedMetrics {
   awdEngagementEvents: { timestamp: number; current: number; duration: number }[];
 }
 
-interface ThresholdConfig {
-  [metricKey: string]: {
-    normal: [number, number];
-    warning: [number, number];
-    danger: [number, number];
-  };
+// Strongly typed — only metrics that have thresholds are keys
+type ThresholdMetricKey =
+  | 'engineRpm' | 'coolantTemp' | 'oilTemp' | 'cvtTemp'
+  | 'batteryVoltage' | 'calculatedBoost' | 'knockCorrection'
+  | 'shortTermFuelTrim' | 'longTermFuelTrim' | 'mafAirFlowRate';
+
+interface ThresholdRange {
+  normal: [number, number];
+  warning: [number, number] | [number, number][];  // array of ranges for split thresholds (e.g., voltage low OR high)
+  danger: [number, number] | [number, number][];
 }
+
+type ThresholdConfig = Record<ThresholdMetricKey, ThresholdRange>;
 ```
 
 ### GPS Parsing (`src/lib/data/gpsParser.ts`)
 
-The CSV has `LATITUDE` and `LONGITUDE` columns on every row, plus `Altitude (GPS)` and `Speed (GPS)` as PID entries. The parser:
-1. Extracts lat/lon from every row with valid coordinates
-2. Deduplicates by ~1s timestamp buckets (matching time-series bucketing)
-3. Merges altitude and GPS speed from PID rows into nearest GPS point
+The CSV has `LATITUDE` and `LONGITUDE` columns (indices 4 and 5) on every row, plus `Altitude (GPS)` and `Speed (GPS)` as PID entries.
+
+**Data flow**: The API route passes the raw CSV string to `parseGPSData()` independently from the existing `parseOBD2File()` pipeline. Both functions receive the same raw text but extract different columns. This avoids modifying the existing parser.
+
+```
+API route receives CSV text
+  ├─> parseOBD2File(csvText) → OBD2DataPoint[]     (existing, unchanged)
+  ├─> parseGPSData(csvText)  → GPSDataPoint[]       (new, reads lat/lon/alt columns)
+  └─> analyzeOBD2Data(dataPoints) → OBD2AnalysisResult (existing, unchanged)
+```
+
+The GPS parser:
+1. Reads each CSV row, extracts columns 0 (timestamp), 4 (latitude), 5 (longitude)
+2. Filters rows with valid numeric lat/lon (non-zero, within plausible range)
+3. Deduplicates by ~1s timestamp buckets (matching time-series bucketing)
+4. Merges `Altitude (GPS)` and `Speed (GPS)` PID values from column 1/2 into nearest GPS point
+
+**Empty GPS handling**: If no valid GPS coordinates are found, returns an empty array. The RouteMap component renders an empty state message ("No GPS data available for this session") instead of a map.
 
 ### Derived Metrics (`src/lib/data/deriveMetrics.ts`)
 
@@ -93,13 +112,15 @@ Computed server-side from the time-series array:
 
 - **Wheel speed differentials**: `(avgFront - avgRear)` and `(avgLeft - avgRight)` per timestamp
 - **CVT effective ratio**: `primaryPulleySpeed / secondaryPulleySpeed` per timestamp
-- **Fuel by speed bucket**: Average `instantFuelRate` grouped into 0-30, 30-60, 60-90, 90+ km/h
+- **Fuel by speed bucket**: Average `instantFuelRate` grouped into 0-30, 30-60, 60-90, 90+ km/h. **Note**: `fuelUsedTotal` is indexed by time; the cumulative fuel vs distance chart requires joining `fuelUsedTotal` with `distanceTravelled` by matching timestamps.
 - **Engine zones**: Classify each timestamp by RPM + load: eco (<2000 RPM, <30% load), sport (>4000 RPM or >70% load), normal (everything else)
-- **AWD engagement events**: Timestamps where solenoid actual current exceeds 150mA baseline, grouped into contiguous events with duration
+- **AWD engagement events**: Timestamps where solenoid actual current exceeds 150mA baseline, grouped into contiguous events. Two events are considered separate if the current drops below 150mA for >3 seconds. Each event records start timestamp, peak current, and duration in seconds.
 
-### Payload Size
+### Payload Size & Downsampling
 
-~101K CSV rows → ~3000 bucketed time-series points + ~3000 GPS points ≈ ~500KB JSON. Acceptable for single-session upload. Future optimization: Largest-Triangle-Three-Buckets downsampling if needed.
+~101K CSV rows → ~3000 bucketed time-series points + ~3000 GPS points. Estimated payload: ~1-2.5MB JSON (worst case: all 45 PID fields populated per bucket at ~15 bytes/field).
+
+**Downsampling guard rail (required for initial implementation)**: If the bucketed time-series exceeds **5000 data points**, apply Largest-Triangle-Three-Buckets (LTTB) downsampling to reduce to 5000 points before sending to the client. GPS data gets the same treatment independently. This prevents unbounded payload growth for longer drive sessions.
 
 ---
 
@@ -113,7 +134,7 @@ Engine: 2.5L FB25 naturally aspirated boxer. No turbo/boost. Redline 6200 RPM.
 | Coolant temp | 80–100°C | 100–108°C | >108°C |
 | Oil temp | 80–110°C | 110–125°C | >125°C |
 | CVT temp | 60–100°C | 100–120°C | >120°C |
-| Battery voltage | 13.8–14.6V | 12.5–13.8V or >14.6V | <12.5V or >15.0V |
+| Battery voltage | 13.8–14.6V | 12.5–13.8V or 14.6–15.0V | <12.5V or >15.0V |
 | Intake vacuum | -0.8 to -0.2 bar | -0.2 to 0 bar | >0 bar (sensor fault) |
 | Knock correction | 0° | -1° to -3° | < -3° |
 | Short-term fuel trim | -5% to +5% | ±5–10% | > ±10% |
@@ -150,7 +171,7 @@ Plus existing safety gauge and trip summary chips.
 | Chart | Type | X | Y | Details |
 |-------|------|---|---|---------|
 | Fuel trims over time | Dual line | time | % | Short-term + Long-term. Threshold bands at ±5%, ±8%, ±10%. |
-| Fuel/Air ratio | Line | time | ratio | Reference line at stoichiometric (14.7:1). |
+| Fuel/Air equivalence ratio | Line | time | ratio | Reference line at 1.0 (stoichiometric). Values >1.0 = rich, <1.0 = lean. PID reports equivalence ratio, not raw AFR. |
 | Consumption vs speed | Scatter | km/h | L/100km | Efficiency sweet spot. Trend line overlay. |
 | Consumption by speed bucket | Bar | bucket | L/100km | 4 bars: 0-30, 30-60, 60-90, 90+. |
 | Cumulative fuel used | Area | distance (km) | litres | Gradient fill, slope = consumption rate. |
@@ -164,18 +185,27 @@ Plus existing safety gauge and trip summary chips.
 | Pulley speeds | Dual line | time | rpm | Primary + Secondary. |
 | CVT effective ratio | Line (derived) | time | ratio | primaryPulleySpeed / secondaryPulleySpeed. |
 | Lock-up duty ratio | Line | time | % | Torque converter clutch engagement. |
+| Turbine speed vs Engine RPM | Dual line | time | rpm | Turbine should lag engine RPM when converter is slipping, match when locked. Complements lock-up duty chart. |
 
-### Tab 5: Driving Behavior
+### Tab 5: Power
+
+| Chart | Type | X | Y | Details |
+|-------|------|---|---|---------|
+| Power output (MAF) over time | Line | time | hp | MAF-based power. Peak annotations. |
+| Power output (fuel) over time | Line | time | hp | Fuel-based power estimate. Overlay with MAF-based for comparison. |
+| Power vs RPM | Scatter | rpm | hp | Color = throttle %. Reveals powerband character of FB25. |
+| Throttle over time | Line | time | % | Aggressive inputs visible as spikes. |
+| Throttle vs acceleration | Scatter | throttle % | g-force | Throttle response character. |
+
+### Tab 6: Driving Behavior
 
 | Chart | Type | X | Y | Details |
 |-------|------|---|---|---------|
 | Acceleration histogram | Histogram | g-force | count | Bins -1g to +1g. Subaru-red for harsh (< -0.4g, > 0.3g). |
 | Speed vs RPM | Scatter | rpm | km/h | Color = gear ratio. Driving efficiency. |
-| Throttle over time | Line | time | % | Aggressive inputs visible as spikes. |
-| Power output | Line | time | hp | MAF-based. Peak annotations. |
-| Throttle vs acceleration | Scatter | throttle % | g-force | Throttle response character. |
+| Speed profile over time | Line | time | km/h | Duplicate of Overview for context within this tab. Harsh event markers. |
 
-### Tab 6: ABS / Stability
+### Tab 7: ABS / Stability
 
 | Chart | Type | X | Y | Details |
 |-------|------|---|---|---------|
@@ -184,20 +214,20 @@ Plus existing safety gauge and trip summary chips.
 | Left-right differential | Line (derived) | time | km/h delta | Spikes during cornering. |
 | Steering angle vs speed | Scatter | km/h | degrees | Cornering behavior profile. |
 
-### Tab 7: AWD System
+### Tab 8: AWD System
 
 | Chart | Type | X | Y | Details |
 |-------|------|---|---|---------|
 | Solenoid current over time | Dual line | time | mA | Actual vs Set. Gap = controller response. |
 | AWD engagement vs steering | Scatter | steering ° | mA | AWD activation during turns. |
 
-### Tab 8: Electrical
+### Tab 9: Electrical
 
 | Chart | Type | X | Y | Details |
 |-------|------|---|---|---------|
 | Battery voltage over time | Line | time | V | Warning/danger bands. Subaru-red glow below 12.5V. |
 
-### Tab 9: Air Intake
+### Tab 10: Air Intake
 
 | Chart | Type | X | Y | Details |
 |-------|------|---|---|---------|
@@ -261,6 +291,7 @@ src/
 │   │   │   ├── EngineTab.tsx
 │   │   │   ├── FuelTab.tsx
 │   │   │   ├── TransmissionTab.tsx
+│   │   │   ├── PowerTab.tsx
 │   │   │   ├── DrivingBehaviorTab.tsx
 │   │   │   ├── ABSTab.tsx
 │   │   │   ├── AWDTab.tsx
@@ -389,11 +420,11 @@ All values specific to the 2024 Subaru Impreza RS (2.5L FB25 NA, CVT, symmetrica
 - Bad: > ±8% — the engine has a persistent fuel delivery issue the ECU is compensating for.
 - Look for: Gradually drifting over time (wear-related issue like aging O2 sensor), sudden jump (new problem like a cracked vacuum hose).
 
-**Fuel/Air Ratio**
-- What: The commanded ratio of fuel to air. Stoichiometric (ideal) is 14.7:1 for gasoline.
-- Good: ~1.0 (equivalence ratio) during normal driving. Slightly rich during acceleration, lean during deceleration.
-- Bad: Sustained rich (>1.05) or lean (<0.95) at steady state.
-- Look for: Matches with fuel trim data — if both show lean, confirms a real lean condition.
+**Fuel/Air Equivalence Ratio**
+- What: The commanded fuel/air equivalence ratio. A value of 1.0 means stoichiometric (ideal 14.7:1 air-to-fuel ratio for gasoline). The OBD2 PID reports this as an equivalence ratio (centered on 1.0), not as a raw AFR number.
+- Good: ~1.0 during steady-state cruising. Slightly above 1.0 (rich) during hard acceleration for cooling. Slightly below 1.0 (lean) during deceleration/coasting.
+- Bad: Sustained >1.05 (rich) or <0.95 (lean) at steady cruise — indicates fuel delivery imbalance.
+- Look for: Matches with fuel trim data — if both show lean, confirms a real lean condition. Brief rich spikes during acceleration are normal and protective.
 
 **Instant Fuel Consumption**
 - What: How much fuel the engine is using right now, in litres per hour.
@@ -517,4 +548,98 @@ colors: {
 }
 ```
 
+The existing `accent.red` (shades 300-600) is deprecated in favor of `subaru-red`. All red usage across the app (existing warning indicators in CategoryMetrics, SafetyGauge danger zone, etc.) should migrate to `subaru-red` for consistency.
+
 Usage: danger threshold bands, redline zones, harsh event markers, critical hover glows, danger metric card accents.
+
+---
+
+## Integration with Existing Dashboard
+
+The dashboard (`src/app/dashboard/page.tsx`) currently reads `data.result` as `OBD2AnalysisResult` and renders metric cards in category tabs. The new response adds `timeSeries`, `gps`, `derived`, and `thresholds` alongside `result`.
+
+### Migration approach
+
+The existing metric cards remain as a **summary row at the top of each tab**. Charts are added below them. This is additive — no existing functionality is removed or replaced.
+
+```
+Dashboard receives ExtendedAnalysisResponse
+  ├─ result → existing SafetyGauge, trip summary, CategoryMetrics (unchanged)
+  ├─ timeSeries → passed to chart components as data source
+  ├─ gps → passed to RouteMap
+  ├─ derived → passed to specific charts (wheel diffs, CVT ratio, fuel buckets, etc.)
+  └─ thresholds → passed to all chart components for annotation bands
+```
+
+The dashboard's `handleFileSelect` function destructures the new fields from the response. Each tab component receives only the data slices it needs as props. The `useTimeRange` hook is initialized at the dashboard level and passed via context.
+
+### Tab restructuring
+
+The existing 9 categories become 10 tabs (Power and Motion split into Power + Driving Behavior). The `CATEGORY_ORDER` array in `CategoryIcon.tsx` is updated to include `power` and `drivingBehavior` as separate entries. A new `DrivingBehaviorIcon` SVG is added. The `CATEGORY_LABELS` map is updated accordingly.
+
+Tab order: Overview, Engine, Fuel, Transmission, Power, Driving Behavior, ABS, AWD, Electrical, Air Intake.
+
+---
+
+## Chart Loading & Skeleton States
+
+Since Plotly and Leaflet are dynamically imported and heavy to initialize, each chart needs a loading state.
+
+### ChartWrapper loading skeleton
+
+The `ChartWrapper` component shows a skeleton while Plotly loads:
+- Glass-morphism card (matching existing Card component)
+- Animated gradient shimmer (reuse existing `animate-progress-shimmer` keyframe)
+- Skeleton matches the chart's expected dimensions (height passed as prop)
+- Faint axis-line shapes in `sapphire-800` to hint at the chart type
+
+### RouteMap loading skeleton
+
+- Same glass-morphism card
+- Pulsing dot in center with "Loading map..." text in `sapphire-300`
+
+### Tab switch behavior
+
+When switching to a new tab with a persisted time range, show skeletons briefly while Plotly renders the new charts with the constrained range. The skeleton disappears per-chart as each individual chart finishes rendering (not all-at-once).
+
+---
+
+## Scatter Plot Time-Range Highlighting
+
+Scatter plots have non-time X axes (RPM, km/h, throttle %, etc.) but must still participate in linked brushing.
+
+### Implementation
+
+Every data point in a scatter plot carries a hidden `customdata` array containing its `timestamp`. When `useTimeRange` has an active selection:
+
+- Points **within** the time range: full opacity, normal size, glow on hover
+- Points **outside** the time range: 0.15 opacity, 60% size, no glow
+
+This is implemented via Plotly's `selectedpoints` API or by splitting data into two traces (selected/unselected) with different marker styles.
+
+When a user selects points on a scatter plot (box/lasso select), the min/max timestamps from the selected points' `customdata` are extracted and fed back to `useTimeRange`, enabling scatter → time-series → map linking.
+
+---
+
+## Mobile Responsiveness
+
+The existing dashboard has strong mobile support (swipe, safe-area, 44px touch targets). Charts must extend this.
+
+### Plotly mobile config
+
+All Plotly charts use:
+- `responsive: true` in layout config
+- `useResizeHandler: true` on the React component
+- `displayModeBar: false` on mobile (< 768px) — replaced with simple pinch-to-zoom
+- `scrollZoom: false` on mobile to prevent conflict with page scroll
+
+### Layout
+
+- **Desktop (≥1024px)**: Charts in 2-column grid where charts are related (e.g., dual lines side by side). Full-width for time-series and map.
+- **Tablet (768-1023px)**: Single column, charts stack vertically.
+- **Mobile (<768px)**: Single column, charts stack vertically. Minimum chart height 250px. Swipe between tabs (existing `useSwipe` hook).
+
+### Map mobile behavior
+
+- Full-width, 300px height on mobile (400px tablet, 500px desktop)
+- Touch gestures: pinch-to-zoom, two-finger pan (single finger reserved for page scroll)
