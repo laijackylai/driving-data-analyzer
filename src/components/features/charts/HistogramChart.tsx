@@ -28,20 +28,19 @@ export function HistogramChart({
   xLabel,
   height = 300,
 }: HistogramChartProps) {
-  const plotTraces = useMemo<Plotly.Data[]>(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const traces: any[] = [
-      {
-        x: data,
-        type: "histogram",
-        nbinsx: bins,
-        name: xLabel ?? "Distribution",
-        marker: { color: CHART_COLORS.primaryFill, line: { color: CHART_COLORS.primary, width: 1 } },
-      },
-    ];
+  // Plotly's @types/plotly.js doesn't expose nbinsx in the union type for histogram
+  // traces, so we extend Data with the missing property rather than suppressing types.
+  type HistogramData = Plotly.Data & { nbinsx?: number };
 
-    return traces;
-  }, [data, bins, xLabel]);
+  const plotTraces = useMemo<HistogramData[]>(() => [
+    {
+      x: data,
+      type: "histogram" as const,
+      nbinsx: bins,
+      name: xLabel ?? "Distribution",
+      marker: { color: CHART_COLORS.primaryFill, line: { color: CHART_COLORS.primary, width: 1 } },
+    },
+  ], [data, bins, xLabel]);
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => {
     const shapes: Partial<Plotly.Shape>[] = (highlightRanges ?? []).map((r) => ({

@@ -17,6 +17,7 @@ export interface OBD2Reading {
  */
 export interface OBD2DataPoint {
   timestamp: number;
+  [key: string]: number | undefined;
 
   // Engine Parameters
   engineRpm?: number;

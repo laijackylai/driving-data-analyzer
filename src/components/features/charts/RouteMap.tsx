@@ -3,6 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
+import { useMap } from "react-leaflet";
 import { GPSDataPoint } from "@/types";
 import { useTimeRange } from "@/hooks/useTimeRange";
 import { CHART_COLORS } from "@/lib/chartTheme";
@@ -26,7 +27,6 @@ const CircleMarker = dynamic(
 );
 
 function FitBounds({ gps }: { gps: GPSDataPoint[] }) {
-  const { useMap } = require("react-leaflet");
   const map = useMap();
   useEffect(() => {
     if (gps.length < 2) return;

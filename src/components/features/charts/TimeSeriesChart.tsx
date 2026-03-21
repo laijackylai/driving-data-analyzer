@@ -2,14 +2,18 @@
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
-import { OBD2DataPoint, ThresholdMetricKey, ThresholdConfig } from "@/types";
+import { ThresholdMetricKey, ThresholdConfig } from "@/types";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS, formatTimestamp, createThresholdShapes } from "@/lib/chartTheme";
 import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
+// Accept any object that has a timestamp and arbitrary numeric fields.
+// This allows both raw OBD2DataPoint[] and derived metric arrays to be plotted.
+export type TimeSeriesRow = { timestamp: number } & Record<string, number | undefined>;
+
 interface TraceConfig {
-  field: keyof OBD2DataPoint;
+  field: string;
   name: string;
   color?: string;
   yaxis?: "y" | "y2";
@@ -24,7 +28,7 @@ interface EventMarker {
 }
 
 interface TimeSeriesChartProps {
-  data: OBD2DataPoint[];
+  data: TimeSeriesRow[];
   traces: TraceConfig[];
   thresholdKey?: ThresholdMetricKey;
   thresholds?: ThresholdConfig;
@@ -54,9 +58,9 @@ export function TimeSeriesChart({
       const ys: number[] = [];
       for (const d of data) {
         const val = d[trace.field];
-        if (val !== undefined && val !== null) {
+        if (typeof val === "number") {
           xs.push(formatTimestamp(d.timestamp, startTime));
-          ys.push(val as number);
+          ys.push(val);
         }
       }
       return {
