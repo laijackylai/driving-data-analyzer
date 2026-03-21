@@ -1,6 +1,6 @@
 "use client";
 
-import { OBD2DataPoint, ThresholdConfig } from "@/types";
+import { OBD2DataPoint } from "@/types";
 import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
@@ -10,7 +10,6 @@ import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface AWDTabProps {
   timeSeries: OBD2DataPoint[];
-  thresholds: ThresholdConfig;
 }
 
 export function AWDTab({ timeSeries }: AWDTabProps) {

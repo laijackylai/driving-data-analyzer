@@ -1,6 +1,6 @@
 "use client";
 
-import { OBD2DataPoint, DerivedMetrics, ThresholdConfig } from "@/types";
+import { OBD2DataPoint, DerivedMetrics } from "@/types";
 import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { TimeSeriesChart, TimeSeriesRow } from "@/components/features/charts/TimeSeriesChart";
@@ -11,7 +11,6 @@ import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 interface ABSTabProps {
   timeSeries: OBD2DataPoint[];
   derived: DerivedMetrics;
-  thresholds: ThresholdConfig;
 }
 
 export function ABSTab({ timeSeries, derived }: ABSTabProps) {

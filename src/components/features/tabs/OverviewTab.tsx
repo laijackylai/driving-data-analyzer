@@ -1,6 +1,6 @@
 "use client";
 
-import { OBD2DataPoint, GPSDataPoint, DerivedMetrics, ThresholdConfig, OBD2AnalysisResult } from "@/types";
+import { OBD2DataPoint, GPSDataPoint, OBD2AnalysisResult } from "@/types";
 import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { RouteMap } from "@/components/features/charts/RouteMap";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
@@ -9,8 +9,6 @@ import { CHART_COLORS } from "@/lib/chartTheme";
 interface OverviewTabProps {
   timeSeries: OBD2DataPoint[];
   gps: GPSDataPoint[];
-  derived: DerivedMetrics;
-  thresholds: ThresholdConfig;
   result: OBD2AnalysisResult;
 }
 

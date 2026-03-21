@@ -320,8 +320,6 @@ export default function DashboardPage() {
                                 <OverviewTab
                                   timeSeries={timeSeries}
                                   gps={gps}
-                                  derived={derived!}
-                                  thresholds={thresholds!}
                                   result={result}
                                 />
                               )}
@@ -348,26 +346,22 @@ export default function DashboardPage() {
                               {cat === "power" && (
                                 <PowerTab
                                   timeSeries={timeSeries}
-                                  thresholds={thresholds!}
                                 />
                               )}
                               {cat === "drivingBehavior" && (
                                 <DrivingBehaviorTab
                                   timeSeries={timeSeries}
-                                  thresholds={thresholds!}
                                 />
                               )}
                               {cat === "abs" && (
                                 <ABSTab
                                   timeSeries={timeSeries}
                                   derived={derived!}
-                                  thresholds={thresholds!}
                                 />
                               )}
                               {cat === "awd" && (
                                 <AWDTab
                                   timeSeries={timeSeries}
-                                  thresholds={thresholds!}
                                 />
                               )}
                               {cat === "electrical" && (
