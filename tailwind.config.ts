@@ -41,6 +41,12 @@ const config: Config = {
             400: "#34d399",
           },
         },
+        "subaru-red": {
+          DEFAULT: "#E0202C",
+          light: "rgba(224, 32, 44, 0.15)",
+          medium: "rgba(224, 32, 44, 0.4)",
+          dark: "rgba(224, 32, 44, 0.8)",
+        },
       },
       fontFamily: {
         display: ["var(--font-outfit)", "system-ui", "sans-serif"],
@@ -57,13 +63,13 @@ const config: Config = {
         "card-glow":
           "linear-gradient(135deg, rgba(54, 112, 198, 0.12) 0%, rgba(15, 34, 64, 0.6) 100%)",
         "red-glow":
-          "radial-gradient(circle at center, rgba(248, 113, 113, 0.15) 0%, transparent 70%)",
+          "radial-gradient(circle at center, rgba(224, 32, 44, 0.15) 0%, transparent 70%)",
       },
       boxShadow: {
         "sapphire-sm": "0 1px 3px rgba(10, 22, 40, 0.4), 0 0 0 1px rgba(54, 112, 198, 0.06)",
         "sapphire-md": "0 4px 16px rgba(10, 22, 40, 0.5), 0 0 0 1px rgba(54, 112, 198, 0.08)",
         "sapphire-lg": "0 8px 32px rgba(10, 22, 40, 0.6), 0 0 0 1px rgba(54, 112, 198, 0.1)",
-        "glow-red": "0 0 20px rgba(248, 113, 113, 0.25), 0 0 60px rgba(248, 113, 113, 0.08)",
+        "glow-red": "0 0 20px rgba(224, 32, 44, 0.25), 0 0 60px rgba(224, 32, 44, 0.08)",
         "glow-sapphire": "0 0 20px rgba(54, 112, 198, 0.2), 0 0 60px rgba(54, 112, 198, 0.06)",
         "inner-shine": "inset 0 1px 0 rgba(184, 212, 240, 0.05)",
       },

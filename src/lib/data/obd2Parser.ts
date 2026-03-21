@@ -5,7 +5,7 @@ import { PID_MAP } from "./pidConstants";
  * Split a semicolon-delimited OBD2 CSV line, respecting quoted fields.
  * Handles trailing semicolons (common in OBD2 CSV exports).
  */
-function splitOBD2Line(line: string): string[] {
+export function splitOBD2Line(line: string): string[] {
   const result: string[] = [];
   let current = "";
   let inQuotes = false;

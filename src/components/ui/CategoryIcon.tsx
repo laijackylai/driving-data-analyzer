@@ -28,6 +28,27 @@ export function CategoryIcon({
   };
 
   switch (category) {
+    // Overview — map pin / route
+    case "overview":
+      return (
+        <svg {...iconProps}>
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" />
+          <circle cx="12" cy="9" r="2.5" />
+        </svg>
+      );
+
+    // Driving Behavior — steering wheel
+    case "drivingBehavior":
+      return (
+        <svg {...iconProps}>
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v7" />
+          <path d="M4.93 4.93l5 5" />
+          <path d="M2 12h7" />
+        </svg>
+      );
+
     // Engine — piston/crank
     case "engine":
       return (
@@ -150,43 +171,46 @@ export function CategoryIcon({
  * Map from category key to display label.
  */
 export const CATEGORY_LABELS: Record<string, string> = {
-  motion: "Motion",
+  overview: "Overview",
   engine: "Engine",
   fuel: "Fuel",
-  airIntake: "Air Intake",
-  power: "Power",
   transmission: "Transmission",
+  power: "Power",
+  drivingBehavior: "Driving",
   abs: "ABS / Stability",
   awd: "AWD",
   electrical: "Electrical",
+  airIntake: "Air Intake",
 };
 
 /**
  * Abbreviated category labels for compact mobile display.
  */
 export const CATEGORY_SHORT_LABELS: Record<string, string> = {
-  motion: "Motion",
+  overview: "Map",
   engine: "Engine",
   fuel: "Fuel",
-  airIntake: "Air",
-  power: "Power",
   transmission: "Trans",
+  power: "Power",
+  drivingBehavior: "Drive",
   abs: "ABS",
   awd: "AWD",
   electrical: "Elec",
+  airIntake: "Air",
 };
 
 /**
  * Ordered list of category keys (matches the tab order in the design spec).
  */
 export const CATEGORY_ORDER = [
-  "motion",
+  "overview",
   "engine",
   "fuel",
-  "airIntake",
-  "power",
   "transmission",
+  "power",
+  "drivingBehavior",
   "abs",
   "awd",
   "electrical",
+  "airIntake",
 ] as const;

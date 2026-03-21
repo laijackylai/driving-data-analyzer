@@ -17,6 +17,7 @@ export interface OBD2Reading {
  */
 export interface OBD2DataPoint {
   timestamp: number;
+  [key: string]: number | undefined;
 
   // Engine Parameters
   engineRpm?: number;
@@ -238,4 +239,95 @@ export interface UploadedFile {
   size: number;
   type: string;
   content: string | ArrayBuffer;
+}
+
+// ── GPS Data ──
+
+export interface GPSDataPoint {
+  timestamp: number;
+  lat: number;
+  lon: number;
+  altitude?: number;
+  gpsSpeed?: number;
+}
+
+// ── Derived Metrics ──
+
+export interface WheelSpeedDiff {
+  timestamp: number;
+  frontRearDelta: number;
+  leftRightDelta: number;
+}
+
+export interface CVTRatioPoint {
+  timestamp: number;
+  ratio: number;
+}
+
+export interface FuelSpeedBucket {
+  bucket: string;
+  avgConsumption: number;
+  sampleCount: number;
+}
+
+export interface EngineZonePoint {
+  timestamp: number;
+  zone: "eco" | "normal" | "sport";
+}
+
+export interface AWDEngagementEvent {
+  timestamp: number;
+  current: number;
+  duration: number;
+}
+
+export interface DerivedMetrics {
+  wheelSpeedDiffs: WheelSpeedDiff[];
+  cvtEffectiveRatio: CVTRatioPoint[];
+  fuelBySpeedBucket: FuelSpeedBucket[];
+  engineZones: EngineZonePoint[];
+  awdEngagementEvents: AWDEngagementEvent[];
+  fuelDistanceSeries: { distance: number; fuel: number }[];
+}
+
+// ── Thresholds ──
+
+export type ThresholdMetricKey =
+  | "engineRpm"
+  | "coolantTemp"
+  | "oilTemp"
+  | "cvtTemp"
+  | "batteryVoltage"
+  | "calculatedBoost"
+  | "knockCorrection"
+  | "shortTermFuelTrim"
+  | "longTermFuelTrim"
+  | "mafAirFlowRate";
+
+export interface ThresholdRange {
+  normal: [number, number];
+  warning: [number, number] | [number, number][];
+  danger: [number, number] | [number, number][];
+}
+
+export type ThresholdConfig = Record<ThresholdMetricKey, ThresholdRange>;
+
+// ── Metric Tooltips ──
+
+export interface MetricTooltipContent {
+  what: string;
+  good: string;
+  bad: string;
+  lookFor: string;
+}
+
+// ── Extended API Response ──
+
+export interface ExtendedAnalysisResponse {
+  success: true;
+  result: OBD2AnalysisResult;
+  timeSeries: OBD2DataPoint[];
+  gps: GPSDataPoint[];
+  derived: DerivedMetrics;
+  thresholds: ThresholdConfig;
 }
