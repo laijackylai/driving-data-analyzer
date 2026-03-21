@@ -2,15 +2,6 @@
 
 import { useRef, useEffect, useState, ReactNode } from "react";
 import { cn } from "@/lib/utils";
-import dynamic from "next/dynamic";
-
-// Dynamically import Plotly to avoid SSR issues
-const Plot = dynamic(() => import("react-plotly.js"), {
-  ssr: false,
-  loading: () => null, // ChartWrapper handles its own loading state
-});
-
-export { Plot };
 
 interface ChartWrapperProps {
   title: string;
@@ -29,39 +20,36 @@ export function ChartWrapper({
   loading = false,
   tooltipContent,
 }: ChartWrapperProps) {
-  const [plotlyReady, setPlotlyReady] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Detect Plotly readiness by checking for the dynamically imported module.
-  // The Plot component renders null via loading prop until ready,
-  // so we observe the container for actual chart content via MutationObserver.
+  // Detect when the chart has rendered by observing for Plotly or Leaflet elements.
+  // Children are always rendered so dynamic imports can mount; the skeleton overlays
+  // them until content appears.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    // Check if Plotly has already rendered (e.g., cached module)
-    if (container.querySelector(".js-plotly-plot")) {
-      setPlotlyReady(true);
+
+    const isReady = () =>
+      !!container.querySelector(".js-plotly-plot, .leaflet-container");
+
+    if (isReady()) {
+      setChartReady(true);
       return;
     }
+
     const observer = new MutationObserver(() => {
-      if (container.querySelector(".js-plotly-plot")) {
-        setPlotlyReady(true);
+      if (isReady()) {
+        setChartReady(true);
         observer.disconnect();
       }
     });
     observer.observe(container, { childList: true, subtree: true });
-    // Fallback: if Plotly loads but no chart is rendered yet (empty data),
-    // resolve after the dynamic import by checking window
-    const checkInterval = setInterval(() => {
-      if (typeof window !== "undefined" && "Plotly" in window) {
-        setPlotlyReady(true);
-        clearInterval(checkInterval);
-      }
-    }, 200);
-    return () => { observer.disconnect(); clearInterval(checkInterval); };
+
+    return () => observer.disconnect();
   }, []);
 
-  const showSkeleton = loading || !plotlyReady;
+  const showSkeleton = loading || !chartReady;
 
   return (
     <div
@@ -82,22 +70,19 @@ export function ChartWrapper({
         {tooltipContent}
       </div>
 
-      {/* Chart area */}
+      {/* Chart area — children always render so dynamic imports can mount */}
       <div style={{ height }} className="relative">
-        {showSkeleton ? (
-          <div className="absolute inset-0 flex items-center justify-center">
+        {children}
+        {showSkeleton && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
             <div className="w-full h-full bg-sapphire-900/30 animate-pulse rounded-b-2xl">
-              {/* Faint axis hints */}
               <div className="absolute bottom-8 left-12 right-4 h-px bg-sapphire-800/50" />
               <div className="absolute top-4 bottom-8 left-12 w-px bg-sapphire-800/50" />
-              {/* Shimmer overlay */}
               <div className="absolute inset-0 overflow-hidden">
                 <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-sapphire-700/10 to-transparent animate-progress-shimmer" />
               </div>
             </div>
           </div>
-        ) : (
-          children
         )}
       </div>
     </div>
