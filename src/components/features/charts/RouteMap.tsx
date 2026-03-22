@@ -1,6 +1,5 @@
 "use client";
 
-import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useMap } from "react-leaflet";
