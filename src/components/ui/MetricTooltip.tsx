@@ -44,7 +44,7 @@ export function MetricTooltip({ content, className }: MetricTooltipProps) {
       {open && (
         <div
           className={cn(
-            "absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2",
+            "absolute z-50 top-full left-1/2 -translate-x-1/2 mt-2",
             "w-72 sm:w-80 p-3 rounded-xl",
             "bg-sapphire-900/95 backdrop-blur-lg",
             "border border-glass-edge",
@@ -69,7 +69,7 @@ export function MetricTooltip({ content, className }: MetricTooltipProps) {
             </div>
           </div>
           {/* Arrow */}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-sapphire-900/95 border-r border-b border-glass-edge" />
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-sapphire-900/95 border-l border-t border-glass-edge" />
         </div>
       )}
     </div>

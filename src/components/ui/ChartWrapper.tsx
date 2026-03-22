@@ -58,12 +58,11 @@ export function ChartWrapper({
         "relative rounded-2xl border border-glass-edge",
         "bg-pearl-gradient backdrop-blur-md",
         "shadow-sapphire-sm",
-        "overflow-hidden",
         className
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+      <div className="relative z-20 flex items-center gap-2 px-4 pt-3 pb-1">
         <h3 className="text-sm font-medium text-sapphire-200 font-body">
           {title}
         </h3>
@@ -71,7 +70,7 @@ export function ChartWrapper({
       </div>
 
       {/* Chart area — children always render so dynamic imports can mount */}
-      <div style={{ height }} className="relative">
+      <div style={{ height }} className="relative z-10 overflow-hidden rounded-b-2xl">
         {children}
         {showSkeleton && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
