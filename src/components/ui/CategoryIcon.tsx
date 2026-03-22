@@ -25,7 +25,7 @@ export function CategoryIcon({
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
     className: cn("shrink-0", className),
-    "aria-hidden": true as const,
+    "aria-hidden": "true" as const,
   };
 
   switch (category) {
