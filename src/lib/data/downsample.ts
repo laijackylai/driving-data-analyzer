@@ -5,7 +5,7 @@ import { OBD2DataPoint, GPSDataPoint } from "@/types";
  * Reduces an array of points to `threshold` points while preserving visual shape.
  * Generic version that works with any object having a numeric key for x and y.
  */
-function lttb<T>(data: T[], threshold: number, getX: (d: T) => number, getY: (d: T) => number): T[] {
+export function lttb<T>(data: T[], threshold: number, getX: (d: T) => number, getY: (d: T) => number): T[] {
   if (threshold >= data.length || threshold < 3) return [...data];
 
   const sampled: T[] = [data[0]]; // Always keep first point

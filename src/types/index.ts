@@ -312,6 +312,44 @@ export interface ThresholdRange {
 
 export type ThresholdConfig = Record<ThresholdMetricKey, ThresholdRange>;
 
+// ── Chart Types ──
+
+/**
+ * A row of time-series data with a required timestamp and arbitrary numeric fields.
+ * Uses intersection type because it combines a fixed field with an index signature,
+ * which cannot be expressed as a single interface.
+ */
+export type TimeSeriesRow = { timestamp: number } & Record<string, number | undefined>;
+
+export interface TraceConfig {
+  field: string;
+  name: string;
+  color?: string;
+  yaxis?: "y" | "y2";
+  fill?: boolean;
+  mode?: "lines" | "markers" | "lines+markers";
+}
+
+export interface EventMarker {
+  timestamp: number;
+  color: string;
+  label: string;
+}
+
+export interface TimeSeriesChartProps {
+  data: TimeSeriesRow[];
+  traces: TraceConfig[];
+  thresholdKey?: ThresholdMetricKey;
+  thresholds?: ThresholdConfig;
+  eventMarkers?: EventMarker[];
+  yAxisLabel?: string;
+  y2AxisLabel?: string;
+  height?: number;
+  startTime: number;
+  /** Per-chart LTTB downsampling threshold. If set, each trace is downsampled to this many points. Must be >= 3 for LTTB. */
+  maxPoints?: number;
+}
+
 // ── Metric Tooltips ──
 
 export interface MetricTooltipContent {

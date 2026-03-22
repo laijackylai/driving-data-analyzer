@@ -2,42 +2,15 @@
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
-import { ThresholdMetricKey, ThresholdConfig } from "@/types";
+import { TimeSeriesRow, TraceConfig, EventMarker, TimeSeriesChartProps } from "@/types";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS, formatTimestamp, createThresholdShapes } from "@/lib/chartTheme";
+import { lttb } from "@/lib/data/downsample";
 import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
-// Accept any object that has a timestamp and arbitrary numeric fields.
-// This allows both raw OBD2DataPoint[] and derived metric arrays to be plotted.
-export type TimeSeriesRow = { timestamp: number } & Record<string, number | undefined>;
-
-interface TraceConfig {
-  field: string;
-  name: string;
-  color?: string;
-  yaxis?: "y" | "y2";
-  fill?: boolean;
-  mode?: "lines" | "markers" | "lines+markers";
-}
-
-interface EventMarker {
-  timestamp: number;
-  color: string;
-  label: string;
-}
-
-interface TimeSeriesChartProps {
-  data: TimeSeriesRow[];
-  traces: TraceConfig[];
-  thresholdKey?: ThresholdMetricKey;
-  thresholds?: ThresholdConfig;
-  eventMarkers?: EventMarker[];
-  yAxisLabel?: string;
-  y2AxisLabel?: string;
-  height?: number;
-  startTime: number;
-}
+// Re-export for consumers that import from here
+export type { TimeSeriesRow };
 
 export function TimeSeriesChart({
   data,
@@ -49,19 +22,31 @@ export function TimeSeriesChart({
   y2AxisLabel,
   height = 300,
   startTime,
+  maxPoints,
 }: TimeSeriesChartProps) {
   const { timeRange, setTimeRange } = useTimeRange();
 
   const plotTraces = useMemo(() => {
     const result: Plotly.Data[] = traces.map((trace) => {
+      // Filter to rows that have a defined value for this trace's field
+      const defined = data.filter((d) => typeof d[trace.field] === "number");
+
+      // Per-chart downsampling if maxPoints is set (must be >= 3 for LTTB).
+      // Each trace downsamples independently — misaligned timestamps are fine
+      // because Plotly renders each trace with its own x-coordinates.
+      // NOTE: data may already have been reduced by API-level downsampleTimeSeries
+      // (which uses engineRpm as the y-proxy). This second pass uses the actual
+      // trace field, so importance signals differ — acceptable when the reduction
+      // ratio is mild (e.g. 5000→2000).
+      const source = maxPoints && maxPoints >= 3 && defined.length > maxPoints
+        ? lttb(defined, maxPoints, (d) => d.timestamp, (d) => d[trace.field] as number)
+        : defined;
+
       const xs: string[] = [];
       const ys: number[] = [];
-      for (const d of data) {
-        const val = d[trace.field];
-        if (typeof val === "number") {
-          xs.push(formatTimestamp(d.timestamp, startTime));
-          ys.push(val);
-        }
+      for (const d of source) {
+        xs.push(formatTimestamp(d.timestamp, startTime));
+        ys.push(d[trace.field] as number);
       }
       return {
         x: xs,
@@ -95,7 +80,7 @@ export function TimeSeriesChart({
     }
 
     return result;
-  }, [data, traces, eventMarkers, startTime]);
+  }, [data, traces, eventMarkers, startTime, maxPoints]);
 
   const layout = useMemo(() => {
     const shapes = thresholdKey && thresholds

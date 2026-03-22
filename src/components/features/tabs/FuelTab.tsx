@@ -10,6 +10,9 @@ import { AreaChart } from "@/components/features/charts/AreaChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
+/** Per-chart LTTB downsampling threshold for Fuel Trims (dual overlapping traces). */
+const FUEL_TRIM_MAX_POINTS = 2000;
+
 interface FuelTabProps {
   timeSeries: OBD2DataPoint[];
   derived: DerivedMetrics;
@@ -39,6 +42,7 @@ export function FuelTab({ timeSeries, derived, thresholds }: FuelTabProps) {
           y2AxisLabel="Long-term %"
           height={280}
           startTime={startTime}
+          maxPoints={FUEL_TRIM_MAX_POINTS}
         />
       </ChartWrapper>
 
