@@ -42,10 +42,10 @@ export function TimeSeriesChart({
         ? lttb(defined, maxPoints, (d) => d.timestamp, (d) => d[trace.field] as number)
         : defined;
 
-      const xs: string[] = [];
+      const xs: number[] = [];
       const ys: number[] = [];
       for (const d of source) {
-        xs.push(formatTimestamp(d.timestamp, startTime));
+        xs.push(d.timestamp - startTime);
         ys.push(d[trace.field] as number);
       }
       return {
@@ -64,7 +64,7 @@ export function TimeSeriesChart({
     // Add event markers
     if (eventMarkers && eventMarkers.length > 0) {
       result.push({
-        x: eventMarkers.map((e) => formatTimestamp(e.timestamp, startTime)),
+        x: eventMarkers.map((e) => e.timestamp - startTime),
         y: eventMarkers.map(() => 0),
         mode: "markers" as const,
         type: "scatter" as const,
@@ -82,14 +82,34 @@ export function TimeSeriesChart({
     return result;
   }, [data, traces, eventMarkers, startTime, maxPoints]);
 
+  // Compute elapsed time range from data for tick generation
+  const elapsedMax = useMemo(() => {
+    if (data.length === 0) return 0;
+    return data[data.length - 1].timestamp - startTime;
+  }, [data, startTime]);
+
   const layout = useMemo(() => {
     const shapes = thresholdKey && thresholds
       ? createThresholdShapes(thresholds[thresholdKey].warning, thresholds[thresholdKey].danger)
       : [];
 
     const xAxisRange = timeRange.start !== null && timeRange.end !== null
-      ? [formatTimestamp(timeRange.start, startTime), formatTimestamp(timeRange.end, startTime)]
+      ? [timeRange.start - startTime, timeRange.end - startTime]
       : undefined;
+
+    // Generate m:ss tick labels for the numeric elapsed-seconds x-axis
+    // Aim for ~10-15 ticks regardless of range, using round intervals
+    const rangeMax = xAxisRange ? xAxisRange[1] : elapsedMax;
+    const TARGET_TICKS = 12;
+    const rawInterval = rangeMax / TARGET_TICKS;
+    const NICE_INTERVALS = [5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+    const tickInterval = NICE_INTERVALS.find((i) => i >= rawInterval) ?? rawInterval;
+    const tickvals: number[] = [];
+    const ticktext: string[] = [];
+    for (let t = 0; t <= rangeMax; t += tickInterval) {
+      tickvals.push(t);
+      ticktext.push(formatTimestamp(t + startTime, startTime));
+    }
 
     const l: Partial<Plotly.Layout> = {
       ...BASE_LAYOUT,
@@ -97,8 +117,11 @@ export function TimeSeriesChart({
       shapes: shapes as Plotly.Layout["shapes"],
       xaxis: {
         ...BASE_LAYOUT.xaxis,
+        type: "linear",
         title: { text: "Time (m:ss)", font: { size: 10, color: CHART_COLORS.textMuted } },
         range: xAxisRange,
+        tickvals,
+        ticktext,
       },
       yaxis: {
         ...BASE_LAYOUT.yaxis,
@@ -118,24 +141,16 @@ export function TimeSeriesChart({
     }
 
     return l;
-  }, [thresholdKey, thresholds, timeRange, startTime, height, yAxisLabel, y2AxisLabel]);
+  }, [thresholdKey, thresholds, timeRange, startTime, height, yAxisLabel, y2AxisLabel, elapsedMax]);
 
   const handleRelayout = (event: Plotly.PlotRelayoutEvent) => {
     const xStart = event["xaxis.range[0]"];
     const xEnd = event["xaxis.range[1]"];
 
     if (xStart != null && xEnd != null) {
-      // Convert relative time string back to timestamp
-      const parseRelative = (v: string | number) => {
-        if (typeof v === "number") return v;
-        const parts = v.split(":");
-        if (parts.length !== 2) return null;
-        const mins = parseInt(parts[0], 10);
-        const secs = parseFloat(parts[1]);
-        return startTime + mins * 60 + secs;
-      };
-      const start = parseRelative(xStart);
-      const end = parseRelative(xEnd);
+      // x-values are elapsed seconds — convert back to absolute timestamps
+      const start = typeof xStart === "number" ? startTime + xStart : null;
+      const end = typeof xEnd === "number" ? startTime + xEnd : null;
       if (start !== null && end !== null) {
         setTimeRange({ start, end, source: "chart" });
       }
