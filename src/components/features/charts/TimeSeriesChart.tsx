@@ -62,6 +62,8 @@ export function TimeSeriesChart({
       const defined = data.filter((d) => typeof d[trace.field] === "number");
 
       // Per-chart downsampling if maxPoints is set
+      // Each trace downsamples independently — misaligned timestamps are fine
+      // because Plotly renders each trace with its own x-coordinates.
       const source = maxPoints && defined.length > maxPoints
         ? lttb(defined, maxPoints, (d) => d.timestamp, (d) => d[trace.field] as number)
         : defined;
