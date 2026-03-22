@@ -77,13 +77,26 @@ Tabs.displayName = "Tabs";
 export interface TabsListProps extends HTMLAttributes<HTMLDivElement> {}
 
 /**
- * Forwarded ref points to the outer wrapper div; use scrollRef internally for scroll state.
+ * Forwarded ref points to the scrollable tablist element (the inner div with role="tablist").
+ * A separate wrapper div provides relative positioning for the fade overlays.
  */
 const TabsList = forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, ...props }, ref) => {
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Merge forwarded ref with internal scrollRef so both point to the scrollable element
+    const setScrollRef = useCallback(
+      (node: HTMLDivElement | null) => {
+        (scrollRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      },
+      [ref]
+    );
+
     const [canScrollLeft, setCanScrollLeft] = useState(false);
-    const [canScrollRight, setCanScrollRight] = useState(false);
+    // Initialize to true to avoid a flash of hidden gradient when tabs overflow on mount
+    const [canScrollRight, setCanScrollRight] = useState(true);
 
     const updateScrollState = useCallback(() => {
       const el = scrollRef.current;
@@ -106,7 +119,7 @@ const TabsList = forwardRef<HTMLDivElement, TabsListProps>(
     }, [updateScrollState]);
 
     return (
-      <div ref={ref} className="relative">
+      <div className="relative">
         {/* Fade edges — only visible when scrollable in that direction */}
         <div
           className={cn(
@@ -128,7 +141,7 @@ const TabsList = forwardRef<HTMLDivElement, TabsListProps>(
         />
 
         <div
-          ref={scrollRef}
+          ref={setScrollRef}
           role="tablist"
           className={cn(
             "flex gap-1 overflow-x-auto px-1 py-1 scrollbar-none",
@@ -158,22 +171,30 @@ const TabsTrigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(
     const { value: activeValue, onValueChange } = useTabsContext();
     const isActive = activeValue === value;
     const buttonRef = useRef<HTMLButtonElement>(null);
-    const resolvedRef = (ref as React.RefObject<HTMLButtonElement>) || buttonRef;
+
+    const setButtonRef = useCallback(
+      (node: HTMLButtonElement | null) => {
+        (buttonRef as React.MutableRefObject<HTMLButtonElement | null>).current = node;
+        if (typeof ref === "function") ref(node);
+        else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = node;
+      },
+      [ref]
+    );
 
     // Scroll active tab into view on mount and when active changes
     useEffect(() => {
-      if (isActive && resolvedRef.current) {
-        resolvedRef.current.scrollIntoView({
+      if (isActive && buttonRef.current) {
+        buttonRef.current.scrollIntoView({
           behavior: "smooth",
           block: "nearest",
           inline: "center",
         });
       }
-    }, [isActive, resolvedRef]);
+    }, [isActive]);
 
     return (
       <button
-        ref={resolvedRef}
+        ref={setButtonRef}
         role="tab"
         aria-selected={isActive}
         onClick={() => onValueChange(value)}

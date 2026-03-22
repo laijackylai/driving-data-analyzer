@@ -25,6 +25,8 @@ export function CategoryIcon({
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
     className: cn("shrink-0", className),
+    // String "true" required — React boolean `true` may not render as a DOM attribute
+    // in all configurations, causing Playwright/axe checks to fail. See commit 39cf4bb.
     "aria-hidden": "true" as const,
   };
 
