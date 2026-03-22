@@ -76,6 +76,9 @@ Tabs.displayName = "Tabs";
 
 export interface TabsListProps extends HTMLAttributes<HTMLDivElement> {}
 
+/**
+ * Forwarded ref points to the outer wrapper div; use scrollRef internally for scroll state.
+ */
 const TabsList = forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, ...props }, ref) => {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,7 +90,7 @@ const TabsList = forwardRef<HTMLDivElement, TabsListProps>(
       if (!el) return;
       setCanScrollLeft(el.scrollLeft > 0);
       setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-    }, []); // scrollRef is stable — no deps needed
+    }, []); // reads scrollRef.current at call time — ref object identity is stable
 
     useEffect(() => {
       const el = scrollRef.current;
