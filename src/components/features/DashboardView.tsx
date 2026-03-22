@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Link from "next/link";
 import { FileUpload } from "@/components/features/FileUpload";
 import { CategoryPanel } from "@/components/features/CategoryPanel";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -67,7 +66,7 @@ function ResetZoomButton() {
   );
 }
 
-export default function DashboardPage() {
+export function DashboardView() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<OBD2AnalysisResult | null>(null);
   const [timeSeries, setTimeSeries] = useState<OBD2DataPoint[]>([]);
@@ -144,32 +143,7 @@ export default function DashboardPage() {
             <h1 className="font-display text-lg sm:text-2xl font-bold text-sapphire-100 tracking-tight">
               OBD2 Dashboard
             </h1>
-            <div className="flex items-center gap-2">
-              <ResetZoomButton />
-              <Link href="/">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-sapphire-400 hover:text-sapphire-200 min-h-[44px] min-w-[44px]"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-1.5"
-                  >
-                    <path d="M19 12H5" />
-                    <path d="M12 19l-7-7 7-7" />
-                  </svg>
-                  <span className="hidden sm:inline">Home</span>
-                </Button>
-              </Link>
-            </div>
+            <ResetZoomButton />
           </div>
 
           {/* ── File upload ── */}
@@ -462,7 +436,16 @@ export default function DashboardPage() {
           <>
             <div
               className="bottom-sheet-backdrop"
+              role="button"
+              tabIndex={0}
+              aria-label="Close session details"
               onClick={() => setSheetOpen(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setSheetOpen(false);
+                }
+              }}
             />
             <div className="bottom-sheet" role="dialog" aria-label="Session details">
               <div

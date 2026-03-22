@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useRef, DragEvent, ChangeEvent } from "react";
+import { useState, useRef, useCallback, DragEvent, ChangeEvent } from "react";
 import { cn, formatFileSize } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
+
+const EXAMPLE_CSV_PATH = "/examples/example-drive.csv";
+const EXAMPLE_CSV_NAME = "example-drive.csv";
 
 interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -77,6 +80,25 @@ export function FileUpload({
     fileInputRef.current?.click();
   };
 
+  const [isLoadingExample, setIsLoadingExample] = useState(false);
+
+  const handleExampleClick = useCallback(async () => {
+    setIsLoadingExample(true);
+    setError(null);
+    try {
+      const response = await fetch(EXAMPLE_CSV_PATH);
+      if (!response.ok) throw new Error("Failed to load example file");
+      const blob = await response.blob();
+      const file = new File([blob], EXAMPLE_CSV_NAME, { type: "text/csv" });
+      setSelectedFile(file);
+      onFileSelect(file);
+    } catch {
+      setError("Failed to load example data");
+    } finally {
+      setIsLoadingExample(false);
+    }
+  }, [onFileSelect, setError, setSelectedFile]);
+
   return (
     <Card className="w-full">
       <CardContent className="p-4 sm:p-6">
@@ -149,14 +171,25 @@ export function FileUpload({
               <p className="text-xs font-medium text-accent-red-400">{error}</p>
             )}
 
-            <Button
-              onClick={handleButtonClick}
-              variant={selectedFile ? "secondary" : "primary"}
-              size="md"
-              className="min-h-[44px] min-w-[140px]"
-            >
-              {selectedFile ? "Choose Different File" : "Browse Files"}
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleButtonClick}
+                variant={selectedFile ? "secondary" : "primary"}
+                size="md"
+                className="min-h-[44px] min-w-[140px]"
+              >
+                {selectedFile ? "Choose Different File" : "Browse Files"}
+              </Button>
+              <Button
+                onClick={handleExampleClick}
+                variant="secondary"
+                size="md"
+                className="min-h-[44px] min-w-[100px]"
+                disabled={isLoadingExample}
+              >
+                {isLoadingExample ? "Loading\u2026" : "Example"}
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

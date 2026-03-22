@@ -121,13 +121,14 @@ export function TimeSeriesChart({
   }, [thresholdKey, thresholds, timeRange, startTime, height, yAxisLabel, y2AxisLabel]);
 
   const handleRelayout = (event: Plotly.PlotRelayoutEvent) => {
-    const xStart = event["xaxis.range[0]"] as string | undefined;
-    const xEnd = event["xaxis.range[1]"] as string | undefined;
+    const xStart = event["xaxis.range[0]"];
+    const xEnd = event["xaxis.range[1]"];
 
-    if (xStart && xEnd) {
+    if (xStart != null && xEnd != null) {
       // Convert relative time string back to timestamp
-      const parseRelative = (s: string) => {
-        const parts = s.split(":");
+      const parseRelative = (v: string | number) => {
+        if (typeof v === "number") return v;
+        const parts = v.split(":");
         if (parts.length !== 2) return null;
         const mins = parseInt(parts[0], 10);
         const secs = parseFloat(parts[1]);
