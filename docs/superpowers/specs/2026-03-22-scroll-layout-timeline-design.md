@@ -56,8 +56,9 @@ Redesign the OBD2 Dashboard from a tab-switching layout to a single-page scroll 
 ### 1. Summary Section
 
 - First section, anchored to the "Summary" tab
-- Contains 9 CategoryPanels (Engine, Fuel, Transmission, Power, Driving Behavior, ABS, AWD, Electrical, Air Intake)
-- Desktop: `grid-cols-4` (4+4+1 layout)
+- Contains 8 CategoryPanels (Engine, Fuel, Transmission, Power, ABS, AWD, Electrical, Air Intake)
+- Driving Behavior has no summary metrics in `OBD2AnalysisResult` — omitted from summary grid
+- Desktop: `grid-cols-4` (4+4 layout)
 - Mobile: `grid-cols-2`
 - Overview does not have a CategoryPanel — it has the SafetyGauge + trip summary which sit above the sticky tab bar
 
@@ -70,6 +71,7 @@ IntersectionObserver lives inside `ChartWrapper` — it already manages skeleton
 - Before `hasEntered`: renders skeleton placeholder at correct height, children do not mount
 - After `hasEntered`: children render, existing MutationObserver skeleton logic handles the Plotly mount transition
 - Two-phase loading: skeleton (not in view) → skeleton (in view, Plotly mounting) → chart visible
+- The existing MutationObserver `useEffect` must depend on `hasEntered` so it starts observing only after children mount
 - No changes needed to individual chart components or tab components
 
 ### 3. Active Section Tracking — `useActiveSection` Hook
@@ -80,8 +82,9 @@ New hook: `src/hooks/useActiveSection.ts`
 - Single IntersectionObserver with `threshold: 0`
 - Negative `rootMargin` accounts for sticky tab bar height (top) and timeline bar height (bottom)
 - When multiple sections visible, picks the one closest to the top of the visible zone
-- Debounced to avoid flickering during fast scrolls
-- On tab click: scrolls to section via `scrollIntoView({ behavior: 'smooth' })` with offset for sticky tab bar height
+- Debounced (~100ms) to avoid flickering during fast scrolls
+- Each section element gets `scroll-margin-top` CSS matching the sticky tab bar height, so `scrollIntoView({ behavior: 'smooth' })` lands correctly
+- On tab click: scrolls to section via `scrollIntoView({ behavior: 'smooth' })`
 - Suppresses observer briefly during programmatic scroll to prevent highlight flickering
 
 ### 4. Sticky Tab Bar
@@ -109,7 +112,7 @@ New file: `src/components/features/TimelineSlider.tsx`
 **Speed heatmap track:**
 - Background bar colored by speed at each time point
 - ~200-300 segments across track width
-- Color scale matching RouteMap: green (<30 km/h), amber (30-80), red (>80)
+- Color scale matching RouteMap using `timeSeries[].vehicleSpeed` field (km/h): green (<30), amber (30-80), red (>80)
 - Selected range: full opacity. Outside range: dimmed (~0.3 opacity)
 
 **Handles + interaction:**
@@ -131,7 +134,7 @@ New file: `src/components/features/TimelineSlider.tsx`
 
 **Sticky positioning:**
 - `sticky bottom-0 z-50` with backdrop blur
-- Respects safe-area insets on mobile (`pb-safe`)
+- Respects safe-area insets on mobile (use existing `.safe-area-pad` utility or `var(--safe-bottom)` custom property)
 
 ### 6. Chart Interaction Changes
 
@@ -144,7 +147,7 @@ New file: `src/components/features/TimelineSlider.tsx`
 - Hover tooltips to show data values
 - Read-only visualization
 
-**RouteMap:** Unchanged — still dims segments outside time range (read-only).
+**RouteMap:** Remove click-to-select-segment handler (currently calls `setTimeRange` on Polyline click). Keep read-only dimming of segments outside time range.
 
 **BarChart, AreaChart, HistogramChart:** Unchanged — no time range interaction.
 
@@ -159,7 +162,9 @@ New file: `src/components/features/TimelineSlider.tsx`
 | `TimeSeriesChart.tsx` | Remove zoom/pan/relayout handlers, keep hover tooltips only |
 | `ScatterChart.tsx` | Remove box-select handler, keep hover tooltips only |
 | `Tabs.tsx` | TabsList becomes sticky scroll-nav, TabsTrigger onClick scrolls to section, TabsContent unused |
-| `useTimeRange.tsx` | No changes (same context, different producer) |
+| `RouteMap.tsx` | Remove click-to-select-segment handler (Polyline onClick that calls setTimeRange) |
+| `useTimeRange.tsx` | Update `source` union type to `"slider" \| "reset"` (remove dead `"chart"` and `"map"` sources) |
+| `CategoryIcon.tsx` | Prepend `"summary"` to `CATEGORY_ORDER`, add label/icon for it |
 
 ### New Files
 
@@ -178,8 +183,10 @@ New file: `src/components/features/TimelineSlider.tsx`
 
 ## Unchanged
 
-- Individual tab components (OverviewTab, EngineTab, etc.) — render charts as before, minus CategoryPanel
-- RouteMap — stays read-only, dims segments outside time range
+- Individual tab components (OverviewTab, EngineTab, etc.) — render charts as before. CategoryPanels move from inline-per-tab (in DashboardView) to the Summary grid.
 - BarChart, AreaChart, HistogramChart — no time range interaction
-- `useTimeRange.tsx` — same context API
-- Type definitions
+- Type definitions (except `TimeRangeState.source` union in `useTimeRange.tsx`)
+
+## Open Questions
+
+- Session Details card (desktop) and bottom sheet (mobile) — currently rendered at the bottom of DashboardView. Place below the last chart section, above the sticky timeline slider.
