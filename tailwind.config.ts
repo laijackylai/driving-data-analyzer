@@ -6,6 +6,12 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    "opacity-0",
+    "opacity-100",
+    "transition-opacity",
+    "duration-200",
+  ],
   theme: {
     extend: {
       colors: {
