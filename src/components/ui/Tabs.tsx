@@ -79,22 +79,53 @@ export interface TabsListProps extends HTMLAttributes<HTMLDivElement> {}
 const TabsList = forwardRef<HTMLDivElement, TabsListProps>(
   ({ className, ...props }, ref) => {
     const scrollRef = useRef<HTMLDivElement>(null);
-    const resolvedRef = (ref as React.RefObject<HTMLDivElement>) || scrollRef;
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
+    const updateScrollState = useCallback(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      setCanScrollLeft(el.scrollLeft > 0);
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+    }, []); // scrollRef is stable — no deps needed
+
+    useEffect(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      updateScrollState();
+      el.addEventListener("scroll", updateScrollState, { passive: true });
+      const ro = new ResizeObserver(updateScrollState);
+      ro.observe(el);
+      return () => {
+        el.removeEventListener("scroll", updateScrollState);
+        ro.disconnect();
+      };
+    }, [updateScrollState]);
 
     return (
-      <div className="relative">
-        {/* Fade edges for scroll indication */}
+      <div ref={ref} className="relative">
+        {/* Fade edges — only visible when scrollable in that direction */}
         <div
-          className="pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-r from-sapphire-950 to-transparent"
+          className={cn(
+            "pointer-events-none absolute left-0 top-0 bottom-0 w-6 z-10",
+            "bg-gradient-to-r from-sapphire-950 to-transparent",
+            "transition-opacity duration-200",
+            canScrollLeft ? "opacity-100" : "opacity-0"
+          )}
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-10 bg-gradient-to-l from-sapphire-950 to-transparent"
+          className={cn(
+            "pointer-events-none absolute right-0 top-0 bottom-0 w-6 z-10",
+            "bg-gradient-to-l from-sapphire-950 to-transparent",
+            "transition-opacity duration-200",
+            canScrollRight ? "opacity-100" : "opacity-0"
+          )}
           aria-hidden="true"
         />
 
         <div
-          ref={resolvedRef}
+          ref={scrollRef}
           role="tablist"
           className={cn(
             "flex gap-1 overflow-x-auto px-1 py-1 scrollbar-none",
