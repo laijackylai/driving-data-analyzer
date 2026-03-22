@@ -39,6 +39,7 @@ export function FuelTab({ timeSeries, derived, thresholds }: FuelTabProps) {
           y2AxisLabel="Long-term %"
           height={280}
           startTime={startTime}
+          maxPoints={2000}
         />
       </ChartWrapper>
 

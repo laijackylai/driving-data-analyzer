@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { ThresholdMetricKey, ThresholdConfig } from "@/types";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS, formatTimestamp, createThresholdShapes } from "@/lib/chartTheme";
+import { lttb } from "@/lib/data/downsample";
 import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
@@ -37,6 +38,8 @@ interface TimeSeriesChartProps {
   y2AxisLabel?: string;
   height?: number;
   startTime: number;
+  /** Per-chart LTTB downsampling threshold. If set, each trace is downsampled to this many points. */
+  maxPoints?: number;
 }
 
 export function TimeSeriesChart({
@@ -49,19 +52,25 @@ export function TimeSeriesChart({
   y2AxisLabel,
   height = 300,
   startTime,
+  maxPoints,
 }: TimeSeriesChartProps) {
   const { timeRange, setTimeRange } = useTimeRange();
 
   const plotTraces = useMemo(() => {
     const result: Plotly.Data[] = traces.map((trace) => {
+      // Filter to rows that have a defined value for this trace's field
+      const defined = data.filter((d) => typeof d[trace.field] === "number");
+
+      // Per-chart downsampling if maxPoints is set
+      const source = maxPoints && defined.length > maxPoints
+        ? lttb(defined, maxPoints, (d) => d.timestamp, (d) => d[trace.field] as number)
+        : defined;
+
       const xs: string[] = [];
       const ys: number[] = [];
-      for (const d of data) {
-        const val = d[trace.field];
-        if (typeof val === "number") {
-          xs.push(formatTimestamp(d.timestamp, startTime));
-          ys.push(val);
-        }
+      for (const d of source) {
+        xs.push(formatTimestamp(d.timestamp, startTime));
+        ys.push(d[trace.field] as number);
       }
       return {
         x: xs,
@@ -95,7 +104,7 @@ export function TimeSeriesChart({
     }
 
     return result;
-  }, [data, traces, eventMarkers, startTime]);
+  }, [data, traces, eventMarkers, startTime, maxPoints]);
 
   const layout = useMemo(() => {
     const shapes = thresholdKey && thresholds
