@@ -24,7 +24,7 @@ export function TimeSeriesChart({
   startTime,
   maxPoints,
 }: TimeSeriesChartProps) {
-  const { timeRange, setTimeRange } = useTimeRange();
+  const { timeRange } = useTimeRange();
 
   const plotTraces = useMemo(() => {
     const result: Plotly.Data[] = traces.map((trace) => {
@@ -143,28 +143,11 @@ export function TimeSeriesChart({
     return l;
   }, [thresholdKey, thresholds, timeRange, startTime, height, yAxisLabel, y2AxisLabel, elapsedMax]);
 
-  const handleRelayout = (event: Plotly.PlotRelayoutEvent) => {
-    const xStart = event["xaxis.range[0]"];
-    const xEnd = event["xaxis.range[1]"];
-
-    if (xStart != null && xEnd != null) {
-      // x-values are elapsed seconds — convert back to absolute timestamps
-      const start = typeof xStart === "number" ? startTime + xStart : null;
-      const end = typeof xEnd === "number" ? startTime + xEnd : null;
-      if (start !== null && end !== null) {
-        setTimeRange({ start, end, source: "chart" });
-      }
-    } else if (event["xaxis.autorange"]) {
-      setTimeRange({ start: null, end: null, source: "reset" });
-    }
-  };
-
   return (
     <Plot
       data={plotTraces}
       layout={layout}
       config={BASE_CONFIG as Plotly.Config}
-      onRelayout={handleRelayout}
       style={{ width: "100%", height: "100%" }}
       useResizeHandler
     />
