@@ -353,10 +353,12 @@ export interface TimeSeriesChartProps {
 // ── Metric Tooltips ──
 
 export interface MetricTooltipContent {
-  what: string;
-  good: string;
-  bad: string;
-  lookFor: string;
+  /** One-line explanation of what the axis represents */
+  axis: string;
+  /** Two-line explanation of what the values mean */
+  values: [string, string];
+  /** One-line explanation of how to interpret the graph */
+  interpretation: string;
 }
 
 // ── Extended API Response ──

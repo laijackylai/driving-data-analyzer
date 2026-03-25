@@ -53,7 +53,7 @@ interface RouteMapProps {
 }
 
 export function RouteMap({ gps, height = 350, className }: RouteMapProps) {
-  const { timeRange, setTimeRange } = useTimeRange();
+  const { timeRange, isRangeActive } = useTimeRange();
 
   const segments = useMemo(() => {
     if (gps.length < 2) return [];
@@ -61,8 +61,7 @@ export function RouteMap({ gps, height = 350, className }: RouteMapProps) {
     for (let i = 0; i < gps.length - 1; i++) {
       const p1 = gps[i];
       const p2 = gps[i + 1];
-      const isActive = timeRange.start !== null && timeRange.end !== null;
-      const inRange = !isActive ||
+      const inRange = !isRangeActive ||
         (p1.timestamp >= timeRange.start! && p1.timestamp <= timeRange.end!);
       result.push({
         positions: [[p1.lat, p1.lon], [p2.lat, p2.lon]] as [number, number][],
@@ -108,15 +107,6 @@ export function RouteMap({ gps, height = 350, className }: RouteMapProps) {
             key={i}
             positions={seg.positions}
             pathOptions={{ color: seg.color, weight: 3, opacity: seg.opacity }}
-            eventHandlers={{
-              click: () => {
-                setTimeRange({
-                  start: seg.timestamp,
-                  end: seg.nextTimestamp,
-                  source: "map",
-                });
-              },
-            }}
           />
         ))}
 

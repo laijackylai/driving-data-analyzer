@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
+import { InsufficientData, INSUFFICIENT_DATA_THRESHOLD } from "@/components/ui/InsufficientData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -14,6 +15,7 @@ interface AreaChartProps {
 }
 
 export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps) {
+  const [forceRender, setForceRender] = useState(false);
   const plotTraces = useMemo<Plotly.Data[]>(() => [
     {
       x: data.map((d) => d.x),
@@ -39,6 +41,10 @@ export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps
       title: yLabel ? { text: yLabel, font: { size: 10, color: CHART_COLORS.textMuted } } : undefined,
     },
   }), [height, xLabel, yLabel]);
+
+  if (data.length < 2 && !forceRender) {
+    return <InsufficientData available={data.length} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
+  }
 
   return (
     <Plot

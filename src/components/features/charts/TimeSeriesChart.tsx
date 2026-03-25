@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { TimeSeriesRow, TraceConfig, EventMarker, TimeSeriesChartProps } from "@/types";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS, formatTimestamp, createThresholdShapes } from "@/lib/chartTheme";
 import { lttb } from "@/lib/data/downsample";
 import { useTimeRange } from "@/hooks/useTimeRange";
+import { InsufficientData, INSUFFICIENT_DATA_THRESHOLD } from "@/components/ui/InsufficientData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -24,7 +25,8 @@ export function TimeSeriesChart({
   startTime,
   maxPoints,
 }: TimeSeriesChartProps) {
-  const { timeRange } = useTimeRange();
+  const { timeRange, isRangeActive } = useTimeRange();
+  const [forceRender, setForceRender] = useState(false);
 
   const plotTraces = useMemo(() => {
     const result: Plotly.Data[] = traces.map((trace) => {
@@ -93,8 +95,8 @@ export function TimeSeriesChart({
       ? createThresholdShapes(thresholds[thresholdKey].warning, thresholds[thresholdKey].danger)
       : [];
 
-    const xAxisRange = timeRange.start !== null && timeRange.end !== null
-      ? [timeRange.start - startTime, timeRange.end - startTime]
+    const xAxisRange = isRangeActive
+      ? [timeRange.start! - startTime, timeRange.end! - startTime]
       : undefined;
 
     // Generate m:ss tick labels for the numeric elapsed-seconds x-axis
@@ -142,6 +144,23 @@ export function TimeSeriesChart({
 
     return l;
   }, [thresholdKey, thresholds, timeRange, startTime, height, yAxisLabel, y2AxisLabel, elapsedMax]);
+
+  // Check if any trace has enough data points (≥10% of total)
+  const hasEnoughData = useMemo(() => {
+    if (data.length === 0) return false;
+    return traces.some((trace) => {
+      const defined = data.filter((d) => typeof d[trace.field] === "number");
+      return defined.length / data.length >= INSUFFICIENT_DATA_THRESHOLD;
+    });
+  }, [data, traces]);
+
+  if (!hasEnoughData && !forceRender) {
+    const best = traces.reduce((max, trace) => {
+      const count = data.filter((d) => typeof d[trace.field] === "number").length;
+      return count > max ? count : max;
+    }, 0);
+    return <InsufficientData available={best} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
+  }
 
   return (
     <Plot

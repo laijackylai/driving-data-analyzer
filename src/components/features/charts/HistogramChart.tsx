@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
+import { InsufficientData } from "@/components/ui/InsufficientData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -28,6 +29,7 @@ export function HistogramChart({
   xLabel,
   height = 300,
 }: HistogramChartProps) {
+  const [forceRender, setForceRender] = useState(false);
   // Plotly's @types/plotly.js doesn't expose nbinsx in the union type for histogram
   // traces, so we extend Data with the missing property rather than suppressing types.
   type HistogramData = Plotly.Data & { nbinsx?: number };
@@ -70,6 +72,10 @@ export function HistogramChart({
       },
     };
   }, [highlightRanges, height, xLabel]);
+
+  if (data.length < 2 && !forceRender) {
+    return <InsufficientData available={data.length} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
+  }
 
   return (
     <Plot

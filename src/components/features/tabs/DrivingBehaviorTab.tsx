@@ -6,7 +6,7 @@ import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { ScatterChart } from "@/components/features/charts/ScatterChart";
 import { HistogramChart } from "@/components/features/charts/HistogramChart";
-import { CHART_COLORS } from "@/lib/chartTheme";
+import { CHART_COLORS, createDrivingEventMarkers } from "@/lib/chartTheme";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface DrivingBehaviorTabProps {
@@ -20,13 +20,7 @@ export function DrivingBehaviorTab({ timeSeries }: DrivingBehaviorTabProps) {
     .map((d) => d.vehicleAcceleration)
     .filter((v): v is number => v !== undefined);
 
-  const harshBrakingMarkers = timeSeries
-    .filter((d) => d.vehicleAcceleration !== undefined && d.vehicleAcceleration < -0.4)
-    .map((d) => ({ timestamp: d.timestamp, color: CHART_COLORS.subaruRed, label: "Harsh braking" }));
-
-  const rapidAccelMarkers = timeSeries
-    .filter((d) => d.vehicleAcceleration !== undefined && d.vehicleAcceleration > 0.3)
-    .map((d) => ({ timestamp: d.timestamp, color: CHART_COLORS.amber, label: "Rapid acceleration" }));
+  const eventMarkers = createDrivingEventMarkers(timeSeries);
 
   return (
     <div className="space-y-4 pt-4">
@@ -70,7 +64,7 @@ export function DrivingBehaviorTab({ timeSeries }: DrivingBehaviorTabProps) {
         <TimeSeriesChart
           data={timeSeries}
           traces={[{ field: "vehicleSpeed", name: "Speed (km/h)", color: CHART_COLORS.primary, fill: true }]}
-          eventMarkers={[...harshBrakingMarkers, ...rapidAccelMarkers]}
+          eventMarkers={eventMarkers}
           yAxisLabel="km/h"
           height={280}
           startTime={startTime}
