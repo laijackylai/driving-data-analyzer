@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -7,13 +8,6 @@ const outfit = Outfit({
   variable: "--font-outfit",
   display: "swap",
   weight: ["400", "500", "600", "700"],
-});
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-dm-sans",
-  display: "swap",
-  weight: ["400", "500", "600"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -49,8 +43,19 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+      className={`${outfit.variable} ${GeistSans.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Doto:wght@600&display=swap"
+          rel="stylesheet"
+        />
+        <style>{`
+          :root { --font-doto: 'Doto'; }
+        `}</style>
+      </head>
       <body className="antialiased bg-sapphire-950 text-sapphire-100 font-body min-h-screen safe-area-pad">
         <div className="pearl-overlay" aria-hidden="true" />
         <div className="grain-overlay" aria-hidden="true" />
