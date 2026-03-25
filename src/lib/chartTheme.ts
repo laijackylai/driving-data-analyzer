@@ -1,4 +1,5 @@
 import type { Layout, Config, Shape } from "plotly.js";
+import type { OBD2DataPoint, EventMarker } from "@/types";
 
 /**
  * Shared Plotly theme configuration matching the sapphire glass-morphism design system.
@@ -82,6 +83,22 @@ export function formatTimestamp(seconds: number, startTime: number): string {
   const mins = Math.floor(elapsed / 60);
   const secs = Math.floor(elapsed % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Create driving event markers (harsh braking + rapid acceleration) from time series data.
+ */
+export function createDrivingEventMarkers(timeSeries: OBD2DataPoint[]): EventMarker[] {
+  const markers: EventMarker[] = [];
+  for (const d of timeSeries) {
+    if (d.vehicleAcceleration === undefined) continue;
+    if (d.vehicleAcceleration < -0.4) {
+      markers.push({ timestamp: d.timestamp, color: CHART_COLORS.subaruRed, label: "Harsh braking" });
+    } else if (d.vehicleAcceleration > 0.3) {
+      markers.push({ timestamp: d.timestamp, color: CHART_COLORS.amber, label: "Rapid acceleration" });
+    }
+  }
+  return markers;
 }
 
 /**

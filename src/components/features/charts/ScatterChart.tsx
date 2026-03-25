@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { OBD2DataPoint } from "@/types";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { useTimeRange } from "@/hooks/useTimeRange";
+import { InsufficientData, INSUFFICIENT_DATA_THRESHOLD } from "@/components/ui/InsufficientData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -27,7 +28,8 @@ export function ScatterChart({
   yLabel,
   height = 300,
 }: ScatterChartProps) {
-  const { timeRange, setTimeRange } = useTimeRange();
+  const { timeRange, isRangeActive } = useTimeRange();
+  const [forceRender, setForceRender] = useState(false);
 
   const plotTraces = useMemo(() => {
     const inRange: { x: number; y: number; ts: number; color?: number }[] = [];
@@ -45,8 +47,7 @@ export function ScatterChart({
         color: colorField ? (d[colorField] as number) : undefined,
       };
 
-      const isActive = timeRange.start !== null && timeRange.end !== null;
-      if (isActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
+      if (isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
         outRange.push(point);
       } else {
         inRange.push(point);
@@ -112,7 +113,6 @@ export function ScatterChart({
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
     height,
-    dragmode: "select",
     xaxis: {
       ...BASE_LAYOUT.xaxis,
       title: xLabel ? { text: xLabel, font: { size: 10, color: CHART_COLORS.textMuted } } : undefined,
@@ -123,26 +123,20 @@ export function ScatterChart({
     },
   }), [height, xLabel, yLabel]);
 
-  const handleSelected = (event: Plotly.PlotSelectionEvent) => {
-    if (!event?.points?.length) return;
-    const timestamps = event.points
-      .map((p) => (p.customdata as unknown as [number])?.[0])
-      .filter((t): t is number => t !== undefined);
-    if (timestamps.length > 0) {
-      setTimeRange({
-        start: Math.min(...timestamps),
-        end: Math.max(...timestamps),
-        source: "chart",
-      });
-    }
-  };
+  // Check if enough data points have both X and Y fields (≥10% of total)
+  const validCount = useMemo(() => {
+    return data.filter((d) => d[xField] !== undefined && d[yField] !== undefined).length;
+  }, [data, xField, yField]);
+
+  if (!forceRender && (data.length === 0 || validCount / data.length < INSUFFICIENT_DATA_THRESHOLD)) {
+    return <InsufficientData available={validCount} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
+  }
 
   return (
     <Plot
       data={plotTraces}
       layout={layout}
       config={BASE_CONFIG as Plotly.Config}
-      onSelected={handleSelected}
       style={{ width: "100%", height: "100%" }}
       useResizeHandler
     />

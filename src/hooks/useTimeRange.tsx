@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useCallback, useMemo, ReactNode } 
 export interface TimeRangeState {
   start: number | null;
   end: number | null;
-  source: "chart" | "map" | "reset";
+  source: "slider" | "reset";
 }
 
 interface TimeRangeContextValue {

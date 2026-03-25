@@ -16,15 +16,12 @@ interface ABSTabProps {
 export function ABSTab({ timeSeries, derived }: ABSTabProps) {
   const startTime = timeSeries[0]?.timestamp ?? 0;
 
-  const frontRearData: TimeSeriesRow[] = derived.wheelSpeedDiffs.map((p) => ({
-    timestamp: p.timestamp,
-    wheelFrontRearDiff: p.frontRearDelta,
-  }));
-
-  const leftRightData: TimeSeriesRow[] = derived.wheelSpeedDiffs.map((p) => ({
-    timestamp: p.timestamp,
-    wheelLeftRightDiff: p.leftRightDelta,
-  }));
+  const frontRearData: TimeSeriesRow[] = [];
+  const leftRightData: TimeSeriesRow[] = [];
+  for (const p of derived.wheelSpeedDiffs) {
+    frontRearData.push({ timestamp: p.timestamp, wheelFrontRearDiff: p.frontRearDelta });
+    leftRightData.push({ timestamp: p.timestamp, wheelLeftRightDiff: p.leftRightDelta });
+  }
 
   return (
     <div className="space-y-4 pt-4">

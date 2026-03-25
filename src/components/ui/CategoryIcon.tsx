@@ -31,6 +31,17 @@ export function CategoryIcon({
   };
 
   switch (category) {
+    // Summary — grid/list icon
+    case "summary":
+      return (
+        <svg {...iconProps}>
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+      );
+
     // Overview — map pin / route
     case "overview":
       return (
@@ -174,6 +185,7 @@ export function CategoryIcon({
  * Map from category key to display label.
  */
 export const CATEGORY_LABELS: Record<string, string> = {
+  summary: "Summary",
   overview: "Overview",
   engine: "Engine",
   fuel: "Fuel",
@@ -190,6 +202,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
  * Abbreviated category labels for compact mobile display.
  */
 export const CATEGORY_SHORT_LABELS: Record<string, string> = {
+  summary: "Sum",
   overview: "Map",
   engine: "Engine",
   fuel: "Fuel",
@@ -206,6 +219,7 @@ export const CATEGORY_SHORT_LABELS: Record<string, string> = {
  * Ordered list of category keys (matches the tab order in the design spec).
  */
 export const CATEGORY_ORDER = [
+  "summary",
   "overview",
   "engine",
   "fuel",

@@ -372,8 +372,8 @@ export function CategoryMetrics({ category, metrics }: CategoryMetricsProps) {
             <div className="flex-1 h-px bg-gradient-to-r from-sapphire-800/60 to-transparent" />
           </div>
 
-          {/* Metric cards grid — 2-col mobile, 3-col desktop */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
+          {/* Metric cards grid — 2-col mobile, 4-col desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
             {group.metrics.map((def) => {
               const value = metricsRecord[def.key];
               const color = getWarningColor(def.key, value);

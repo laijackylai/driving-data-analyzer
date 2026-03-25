@@ -20,18 +20,42 @@ export function ChartWrapper({
   loading = false,
   tooltipContent,
 }: ChartWrapperProps) {
+  const [hasEntered, setHasEntered] = useState(false);
   const [chartReady, setChartReady] = useState(false);
+  const hasEnteredRef = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Detect when the chart has rendered by observing for Plotly or Leaflet elements.
-  // Children are always rendered so dynamic imports can mount; the skeleton overlays
-  // them until content appears.
+  // IntersectionObserver for lazy loading — load when 200px from viewport
   useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasEnteredRef.current) {
+          hasEnteredRef.current = true;
+          setHasEntered(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
+
+  // Detect when the chart has rendered by observing for Plotly or Leaflet elements.
+  // Only starts after children have mounted (hasEntered = true).
+  useEffect(() => {
+    if (!hasEntered) return;
+
     const container = containerRef.current;
     if (!container) return;
 
     const isReady = () =>
-      !!container.querySelector(".js-plotly-plot, .leaflet-container");
+      !!container.querySelector(".js-plotly-plot, .leaflet-container, [data-insufficient]");
 
     if (isReady()) {
       setChartReady(true);
@@ -47,13 +71,13 @@ export function ChartWrapper({
     observer.observe(container, { childList: true, subtree: true });
 
     return () => observer.disconnect();
-  }, []);
+  }, [hasEntered]);
 
-  const showSkeleton = loading || !chartReady;
+  const showSkeleton = loading || !hasEntered || !chartReady;
 
   return (
     <div
-      ref={containerRef}
+      ref={wrapperRef}
       className={cn(
         "relative rounded-2xl border border-glass-edge",
         "bg-pearl-gradient backdrop-blur-md",
@@ -69,9 +93,15 @@ export function ChartWrapper({
         {tooltipContent}
       </div>
 
-      {/* Chart area — children always render so dynamic imports can mount */}
-      <div style={{ height }} className="relative z-10 overflow-hidden rounded-b-2xl">
-        {children}
+      {/* Chart area */}
+      <div
+        ref={containerRef}
+        style={{ height }}
+        className="relative z-10 overflow-hidden rounded-b-2xl"
+      >
+        {/* Children only mount after entering viewport */}
+        {hasEntered && children}
+
         {showSkeleton && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
             <div className="w-full h-full bg-sapphire-900/30 animate-pulse rounded-b-2xl">

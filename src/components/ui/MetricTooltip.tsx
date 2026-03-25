@@ -54,19 +54,18 @@ export function MetricTooltip({ content, className }: MetricTooltipProps) {
           )}
         >
           <div className="space-y-2">
-            <p className="text-sapphire-100">{content.what}</p>
-            <div>
-              <span className="text-accent-emerald-400 font-medium">Good: </span>
-              <span className="text-sapphire-200">{content.good}</span>
+            <p className="text-sky-300 font-medium">{content.axis}</p>
+            <div className="space-y-1">
+              <p className="text-sapphire-200">
+                <span className="text-accent-emerald-400 font-medium">Normal: </span>
+                {content.values[0]}
+              </p>
+              <p className="text-sapphire-200">
+                <span className="text-subaru-red font-medium">Warning: </span>
+                {content.values[1]}
+              </p>
             </div>
-            <div>
-              <span className="text-subaru-red font-medium">Bad: </span>
-              <span className="text-sapphire-200">{content.bad}</span>
-            </div>
-            <div>
-              <span className="text-sapphire-300 font-medium">Look for: </span>
-              <span className="text-sapphire-200">{content.lookFor}</span>
-            </div>
+            <p className="text-amber-300/90 italic">{content.interpretation}</p>
           </div>
           {/* Arrow */}
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-sapphire-900/95 border-l border-t border-glass-edge" />
