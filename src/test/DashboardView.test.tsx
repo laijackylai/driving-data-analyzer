@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 import { DashboardView } from "@/components/features/DashboardView";
@@ -7,6 +7,12 @@ import { DashboardView } from "@/components/features/DashboardView";
 // Mock fetch for API calls and demo file
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
+
+// html-to-image is not runnable in jsdom — return a stable data URL for both
+// the landing capture (handleFileSelect) and the dashboard capture (revealing useEffect)
+vi.mock("html-to-image", () => ({
+  toPng: vi.fn().mockResolvedValue("data:image/png;base64,FAKE"),
+}));
 
 // jsdom doesn't implement IntersectionObserver — stub it out with a class
 class MockIntersectionObserver {
@@ -32,21 +38,21 @@ vi.mock("@/components/features/DotLoader", () => ({
   DotLoader: () => <div data-testid="dot-loader" />,
 }));
 
-vi.mock("@/components/features/PixelTransition", () => ({
-  PixelTransition: ({
-    active,
+// PixelizeEffect: phase="in" is passive (no callback), phase="out" auto-completes immediately
+vi.mock("@/components/features/PixelizeEffect", () => ({
+  PixelizeEffect: ({
+    targetSnapshotUrl,
     onComplete,
-    children,
   }: {
-    active: boolean;
-    onComplete: () => void;
-    children: React.ReactNode;
+    snapshotUrl: string;
+    targetSnapshotUrl?: string | null;
+    onComplete?: () => void;
   }) => {
-    // Auto-complete transition immediately in tests
-    if (active) {
+    // Auto-trigger completion when dashboard snapshot arrives (phase "out")
+    if (targetSnapshotUrl && onComplete) {
       setTimeout(onComplete, 0);
     }
-    return <div data-testid="pixel-transition">{children}</div>;
+    return <div data-testid={targetSnapshotUrl ? "pixelize-effect-out" : "pixelize-effect-in"} />;
   },
 }));
 
@@ -124,50 +130,6 @@ const makeMockResult = (overrides?: object) => ({
   },
 });
 
-// Separate describe for the handleDissolveComplete null-pendingFile guard.
-// We need a controlled PixelTransition that does NOT auto-call onComplete.
-describe("DashboardView handleDissolveComplete null guard", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // Override PixelTransition mock to capture onComplete WITHOUT auto-calling it
-    vi.doMock("@/components/features/PixelTransition", () => ({
-      PixelTransition: ({
-        active,
-        onComplete,
-        children,
-      }: {
-        active: boolean;
-        onComplete: () => void;
-        children: React.ReactNode;
-      }) => {
-        // Expose onComplete on the window so tests can call it manually
-        if (active) {
-          (window as unknown as Record<string, unknown>).__dissolveOnComplete = onComplete;
-        }
-        return <div data-testid="pixel-transition">{children}</div>;
-      },
-    }));
-  });
-
-  afterAll(() => {
-    vi.doUnmock("@/components/features/PixelTransition");
-  });
-
-  // NOTE: The null-pendingFile guard in handleDissolveComplete (lines 280-281) is a
-  // purely defensive branch — in normal app flow, pendingFileRef is always set before
-  // the dissolving state is entered. It cannot be triggered through the public API,
-  // so we document it here rather than testing it via an unreachable code path.
-  it("null pendingFile guard is defensive — stays in landing when pendingFile is never set", () => {
-    // This test documents the behaviour: if onComplete fires with no pending file,
-    // the app falls back to landing. We verify that landing is still shown when
-    // the PixelTransition mock doesn't auto-advance (no file selected).
-    render(<DashboardView />);
-    expect(screen.getByTestId("landing-view")).toBeInTheDocument();
-    // No pixel-transition is shown when viewState is "landing"
-    expect(screen.queryByTestId("pixel-transition")).not.toBeInTheDocument();
-  });
-});
-
 describe("DashboardView state machine", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -187,7 +149,7 @@ describe("DashboardView state machine", () => {
     expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
   });
 
-  it("transitions to ANALYZING on file select", async () => {
+  it("transitions to ANALYZING immediately on file select", async () => {
     const user = userEvent.setup();
     // Mock a pending fetch — never resolves, keeps us in analyzing state
     mockFetch.mockReturnValueOnce(new Promise<never>(() => {}));
@@ -195,11 +157,9 @@ describe("DashboardView state machine", () => {
     render(<DashboardView />);
     await user.click(screen.getByText("mock-upload"));
 
-    // PixelTransition mock auto-completes via setTimeout(0),
-    // after which state goes dissolving → analyzing → dot loader appears
-    await vi.waitFor(() => {
-      expect(screen.getByTestId("dot-loader")).toBeInTheDocument();
-    });
+    // Dot loader and pixelize-in appear immediately (no intermediate dissolve step)
+    expect(screen.getByTestId("dot-loader")).toBeInTheDocument();
+    expect(screen.getByTestId("pixelize-effect-in")).toBeInTheDocument();
   });
 
   it("transitions to DASHBOARD on successful analysis", async () => {
@@ -214,10 +174,11 @@ describe("DashboardView state machine", () => {
     render(<DashboardView />);
     await user.click(screen.getByText("mock-upload"));
 
-    // Should eventually show dashboard content (landing view gone, no dot loader)
+    // API resolves → revealing → PixelizeEffect phase="out" auto-completes → dashboard
     await vi.waitFor(() => {
       expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
       expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("pixelize-effect-out")).not.toBeInTheDocument();
     });
   });
 
@@ -232,7 +193,6 @@ describe("DashboardView state machine", () => {
     await user.click(screen.getByText("mock-upload"));
 
     await vi.waitFor(() => {
-      // Should show landing again with error visible
       expect(screen.getByTestId("landing-view")).toBeInTheDocument();
     });
   });
@@ -263,7 +223,6 @@ describe("DashboardView state machine", () => {
 
   it("returns to LANDING when home button is clicked from DASHBOARD", async () => {
     const user = userEvent.setup();
-    // Provide 2+ data points so TimelineSlider renders and shows home button
     const mockResult = makeMockResult();
     mockResult.timeSeries = [
       { timestamp: 1000, vehicleSpeed: 50 },
@@ -281,23 +240,22 @@ describe("DashboardView state machine", () => {
     await user.click(screen.getByText("mock-upload"));
     await vi.waitFor(() => {
       expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("pixelize-effect-out")).not.toBeInTheDocument();
     });
 
     // Click the home button on the TimelineSlider
     const homeButton = screen.getByRole("button", { name: /return to landing/i });
     await user.click(homeButton);
 
-    // Should return to landing
     await vi.waitFor(() => {
       expect(screen.getByTestId("landing-view")).toBeInTheDocument();
     });
   });
 
-  it("clicking a tab button in DASHBOARD calls scrollToSection (line 113)", async () => {
+  it("clicking a tab button in DASHBOARD calls scrollToSection", async () => {
     const user = userEvent.setup();
     const mockResult = makeMockResult();
 
-    // jsdom does not implement scrollIntoView — stub it to avoid unimplemented errors
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
 
     mockFetch.mockResolvedValueOnce({
@@ -308,16 +266,13 @@ describe("DashboardView state machine", () => {
     render(<DashboardView />);
     await user.click(screen.getByText("mock-upload"));
 
-    // Wait for dashboard state
     await vi.waitFor(() => {
       expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
       expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
     });
 
-    // Tab buttons are rendered; click one to invoke scrollToSection
     const tabs = screen.getAllByRole("tab");
     expect(tabs.length).toBeGreaterThan(0);
-    // Should not throw — scrollIntoView is stubbed above
     await user.click(tabs[0]);
   });
 
@@ -333,14 +288,12 @@ describe("DashboardView state machine", () => {
 
     await vi.waitFor(() => {
       expect(screen.getByTestId("landing-view")).toBeInTheDocument();
-      // Error toast should be visible
       expect(screen.getByText(/parse error/i)).toBeInTheDocument();
     });
   });
 
   it("falls back to 'Analysis failed' when error response has no error field (|| branch)", async () => {
     const user = userEvent.setup();
-    // ok: false but no error field — triggers `data.error || "Analysis failed"` fallback
     mockFetch.mockResolvedValueOnce({
       ok: false,
       json: () => Promise.resolve({}),
@@ -358,10 +311,8 @@ describe("DashboardView state machine", () => {
   it("handles null timeSeries/gps/derived/thresholds in API response (?? branches)", async () => {
     const user = userEvent.setup();
     const mockResult = makeMockResult();
-    // Patch in a totalDistance: null to cover the "—" branch in SummaryChip
     mockResult.result.motion.totalDistance = null;
 
-    // Return response with timeSeries/gps/derived/thresholds all missing (undefined → ??)
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({
@@ -373,8 +324,7 @@ describe("DashboardView state machine", () => {
     render(<DashboardView />);
     await user.click(screen.getByText("mock-upload"));
 
-    // When timeSeries is [] (from ?? []) and derived/thresholds are null,
-    // hasAllData is false → dashboard doesn't show — falls back to showing nothing
+    // hasAllData is false → dashboard doesn't show
     await vi.waitFor(() => {
       expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
     });
@@ -398,7 +348,79 @@ describe("DashboardView state machine", () => {
       expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
     });
 
-    // The "—" text should appear in the SummaryChip for Distance
     expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("renders COBB section heading when dataSource is cobb", async () => {
+    const user = userEvent.setup();
+    const mockResult = makeMockResult();
+
+    const cobbResult = {
+      boost: {
+        avgBoostPsi: 10, maxBoostPsi: 18, avgTargetBoostPsi: 16,
+        maxTargetBoostPsi: 18, avgBoostErrorPsi: 0.5, maxBoostErrorPsi: 2,
+      },
+      knock: {
+        knockEventCount: 3, avgFeedbackKnock: -0.8, minFeedbackKnock: -2.5,
+        avgFineKnockLearn: -0.5, minFineKnockLearn: -1.5, avgDAM: 0.95, minDAM: 0.875,
+      },
+      afr: {
+        avgAFR: 14.7, avgAFRTarget: 14.7, avgAFRDeviation: 0.2,
+        maxAFRDeviation: 0.8, avgAFCorrection1: 1.5, avgAFLearning1: 2.0,
+      },
+      wastegate: {
+        avgWastegateActualMm: 12, maxWastegateActualMm: 18,
+        avgWastegateTargetMm: 13, avgWastegateErrorMm: -1,
+      },
+      injector: {
+        avgInjDutyCycle: 60, maxInjDutyCycle: 85,
+        avgInjPulseWidthMs: 3.5, maxInjPulseWidthMs: 6.0, fuelCutEventCount: 0,
+      },
+      avcs: {
+        avgAvcsExhLeft: 2.5, maxAvcsExhLeft: 5.0,
+        avgAvcsInLeft: -14.0, maxAvcsInLeft: -10.0,
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        ...mockResult,
+        dataSource: "cobb",
+        cobbResult,
+      }),
+    });
+
+    render(<DashboardView />);
+    await user.click(screen.getByText("mock-upload"));
+
+    await vi.waitFor(() => {
+      expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText("COBB Accessport")).toBeInTheDocument();
+  });
+
+  it("does not render COBB section when dataSource is obd2", async () => {
+    const user = userEvent.setup();
+    const mockResult = makeMockResult();
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({
+        ...mockResult,
+        dataSource: "obd2",
+      }),
+    });
+
+    render(<DashboardView />);
+    await user.click(screen.getByText("mock-upload"));
+
+    await vi.waitFor(() => {
+      expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("COBB Accessport")).not.toBeInTheDocument();
   });
 });

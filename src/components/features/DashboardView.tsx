@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { CategoryPanel } from "@/components/features/CategoryPanel";
 import { Card, CardContent } from "@/components/ui/Card";
-import { SafetyGauge } from "@/components/ui/SafetyGauge";
 import {
   CategoryIcon,
   CATEGORY_LABELS,
@@ -18,6 +17,9 @@ import {
   ThresholdConfig,
   ExtendedAnalysisResponse,
   CategoryMetricsType,
+  DataSource,
+  CobbAnalysisResult,
+  CobbMetadata,
 } from "@/types";
 import { formatDuration } from "@/lib/utils";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -26,7 +28,7 @@ import { useActiveSection } from "@/hooks/useActiveSection";
 import { TimelineSlider } from "@/components/features/TimelineSlider";
 import { LandingView } from "@/components/features/LandingView";
 import { DotLoader } from "@/components/features/DotLoader";
-import { PixelTransition } from "@/components/features/PixelTransition";
+import { PixelizeEffect } from "@/components/features/PixelizeEffect";
 
 // Tab components
 import { OverviewTab } from "@/components/features/tabs/OverviewTab";
@@ -42,7 +44,7 @@ import { AirIntakeTab } from "@/components/features/tabs/AirIntakeTab";
 
 // ── View state machine ──
 
-type ViewState = "landing" | "dissolving" | "analyzing" | "dashboard";
+type ViewState = "landing" | "analyzing" | "dashboard";
 
 // RESULT_KEY_MAP maps category keys to OBD2AnalysisResult keys for CategoryPanel
 const RESULT_KEY_MAP: Partial<Record<(typeof CATEGORY_ORDER)[number], keyof OBD2AnalysisResult>> = {
@@ -72,6 +74,9 @@ function DashboardContent({
   derived,
   thresholds,
   onHomeClick,
+  dataSource,
+  cobbResult,
+  cobbMetadata,
 }: {
   result: OBD2AnalysisResult;
   timeSeries: OBD2DataPoint[];
@@ -79,6 +84,9 @@ function DashboardContent({
   derived: DerivedMetrics;
   thresholds: ThresholdConfig;
   onHomeClick: () => void;
+  dataSource: DataSource;
+  cobbResult: CobbAnalysisResult | null;
+  cobbMetadata: CobbMetadata | null;
 }) {
   const { activeSection, scrollToSection } = useActiveSection(SECTION_IDS);
   const hasChartData = timeSeries.length > 0;
@@ -113,7 +121,7 @@ function DashboardContent({
                     onClick={() => scrollToSection(cat)}
                     className={[
                       "relative whitespace-nowrap min-h-[40px] px-3 py-2 rounded-lg",
-                      "text-sm font-medium font-body",
+                      "text-base font-black font-brand",
                       "transition-all duration-200 ease-out",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sapphire-500/50",
                       "flex items-center gap-1.5 shrink-0",
@@ -217,6 +225,165 @@ function DashboardContent({
           {hasChartData && <AirIntakeTab timeSeries={timeSeries} thresholds={thresholds} />}
         </section>
 
+        {/* COBB Accessport Data — only when dataSource is cobb */}
+        {dataSource === "cobb" && cobbResult && (
+          <section className="mt-6">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
+              COBB Accessport
+            </h2>
+            {cobbMetadata?.vehicle && (
+              <p className="text-sm text-muted-foreground font-mono mb-4">
+                {cobbMetadata.vehicle}{cobbMetadata.tune ? ` · ${cobbMetadata.tune}` : ""}
+              </p>
+            )}
+            <div className="space-y-6">
+              {/* Chart 1 — Boost Curve */}
+              <div>
+                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Boost Curve</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Boost</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.boost.avgBoostPsi != null ? `${cobbResult.boost.avgBoostPsi} psi` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Max Boost</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.boost.maxBoostPsi != null ? `${cobbResult.boost.maxBoostPsi} psi` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Max Boost Error</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.boost.maxBoostErrorPsi != null ? `${cobbResult.boost.maxBoostErrorPsi} psi` : "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 2 — Knock */}
+              <div>
+                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Knock Events</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Knock Events</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.knock.knockEventCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Min Feedback Knock</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.knock.minFeedbackKnock != null ? `${cobbResult.knock.minFeedbackKnock}°` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Min DAM</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.knock.minDAM != null ? cobbResult.knock.minDAM : "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 3 — AFR */}
+              <div>
+                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">AFR vs Target</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg AFR</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.afr.avgAFR != null ? cobbResult.afr.avgAFR : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Target AFR</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.afr.avgAFRTarget != null ? cobbResult.afr.avgAFRTarget : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Max AFR Deviation</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.afr.maxAFRDeviation != null ? cobbResult.afr.maxAFRDeviation : "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 4 — Wastegate */}
+              <div>
+                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Wastegate Position</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Actual</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.wastegate.avgWastegateActualMm != null ? `${cobbResult.wastegate.avgWastegateActualMm} mm` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Max Actual</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.wastegate.maxWastegateActualMm != null ? `${cobbResult.wastegate.maxWastegateActualMm} mm` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Error</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.wastegate.avgWastegateErrorMm != null ? `${cobbResult.wastegate.avgWastegateErrorMm} mm` : "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 5 — Injector */}
+              <div>
+                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Injector</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Duty Cycle</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.injector.avgInjDutyCycle != null ? `${cobbResult.injector.avgInjDutyCycle}%` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Max Duty Cycle</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.injector.maxInjDutyCycle != null ? `${cobbResult.injector.maxInjDutyCycle}%` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Fuel Cut Events</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.injector.fuelCutEventCount}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chart 6 — AVCS */}
+              <div>
+                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">AVCS Cam Timing</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Intake</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.avcs.avgAvcsInLeft != null ? `${cobbResult.avcs.avgAvcsInLeft}°` : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
+                    <p className="text-xs text-sapphire-500 mb-1">Avg Exhaust</p>
+                    <p className="text-lg font-mono font-semibold text-sapphire-100">
+                      {cobbResult.avcs.avgAvcsExhLeft != null ? `${cobbResult.avcs.avgAvcsExhLeft}°` : "—"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Session details — below last section, above timeline */}
         <div className="mt-6">
           <SessionDetailsCard result={result} />
@@ -231,7 +398,10 @@ function DashboardContent({
 
 export function DashboardView() {
   const [viewState, setViewState] = useState<ViewState>("landing");
-  const pendingFileRef = useRef<File | null>(null);
+  const [showDotLoader, setShowDotLoader] = useState(true);
+  const [snapshotUrl, setSnapshotUrl] = useState<string>("/landing-snapshot.png");
+  const [dashboardSnapshotUrl, setDashboardSnapshotUrl] = useState<string | null>(null);
+  const dashboardCaptureRef = useRef<HTMLDivElement>(null);
 
   const [result, setResult] = useState<OBD2AnalysisResult | null>(null);
   const [timeSeries, setTimeSeries] = useState<OBD2DataPoint[]>([]);
@@ -239,6 +409,9 @@ export function DashboardView() {
   const [derived, setDerived] = useState<DerivedMetrics | null>(null);
   const [thresholds, setThresholds] = useState<ThresholdConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<DataSource>("obd2");
+  const [cobbResult, setCobbResult] = useState<CobbAnalysisResult | null>(null);
+  const [cobbMetadata, setCobbMetadata] = useState<CobbMetadata | null>(null);
 
   const analyzeFile = useCallback(async (file: File) => {
     setError(null);
@@ -259,44 +432,102 @@ export function DashboardView() {
         return;
       }
 
+      const derivedData = data.derived ?? null;
+      const thresholdsData = data.thresholds ?? null;
+
       setResult(data.result);
       setTimeSeries(data.timeSeries ?? []);
       setGps(data.gps ?? []);
-      setDerived(data.derived ?? null);
-      setThresholds(data.thresholds ?? null);
-      setViewState("dashboard");
+      setDerived(derivedData);
+      setThresholds(thresholdsData);
+      setDataSource(data.dataSource ?? "obd2");
+      setCobbResult(data.cobbResult ?? null);
+      setCobbMetadata(data.cobbMetadata ?? null);
+
+      if (!derivedData || !thresholdsData) {
+        setError("Analysis failed");
+        setViewState("landing");
+        return;
+      }
+      // Stay in "analyzing" — the capture useEffect will trigger phase "out" automatically
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
       setViewState("landing");
     }
   }, []); // empty deps — all deps are stable state setters from useState
 
-  const handleFileSelect = (file: File) => {
-    pendingFileRef.current = file;
-    setViewState("dissolving");
-  };
-
-  const handleDissolveComplete = useCallback(() => {
-    /* istanbul ignore next — defensive guard; pendingFileRef is always set before dissolving */
-    if (!pendingFileRef.current) {
-      setViewState("landing");
-      return;
+  // Capture live DOM snapshot of the landing view before transitioning.
+  // html-to-image reads computed styles so it works at any viewport size.
+  // Falls back to the static /landing-snapshot.png if capture fails.
+  const capturingRef = useRef(false);
+  const handleFileSelect = useCallback(async (file: File) => {
+    if (!capturingRef.current) {
+      capturingRef.current = true;
+      try {
+        const { toPng } = await import("html-to-image");
+        const dataUrl = await toPng(document.documentElement, {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          pixelRatio: 1,
+          skipAutoScale: true,
+          skipFonts: true,
+        });
+        setSnapshotUrl(dataUrl);
+      } catch {
+        // fallback: keep the static snapshot
+      }
+      capturingRef.current = false;
     }
     setViewState("analyzing");
-    analyzeFile(pendingFileRef.current);
+    analyzeFile(file);
   }, [analyzeFile]);
 
+  const handleBeforeDashboardReveal = useCallback(() => {
+    setShowDotLoader(false);
+  }, []);
+
+  const handleDashboardReveal = useCallback(() => {
+    setViewState("dashboard");
+  }, []);
+
   const handleHomeClick = useCallback(() => {
+    setShowDotLoader(true);
     setResult(null);
     setTimeSeries([]);
     setGps([]);
     setDerived(null);
     setThresholds(null);
     setError(null);
+    setDashboardSnapshotUrl(null);
     setViewState("landing");
   }, []);
 
   const hasAllData = result && derived && thresholds;
+
+  // When API returns (hasAllData becomes true while still in "analyzing"),
+  // capture the dashboard div rendered behind the PixelizeEffect canvas,
+  // then hand it to PixelizeEffect as targetSnapshotUrl to trigger coarse→fine.
+  useEffect(() => {
+    if (viewState !== "analyzing" || !hasAllData || dashboardSnapshotUrl !== null) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const { toPng } = await import("html-to-image");
+        const el = dashboardCaptureRef.current ?? document.documentElement;
+        const url = await toPng(el, {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          pixelRatio: 1,
+          skipAutoScale: true,
+          skipFonts: true,
+        });
+        if (active) setDashboardSnapshotUrl(url);
+      } catch {
+        if (active) setDashboardSnapshotUrl(snapshotUrl); // fallback
+      }
+    }, 50);
+    return () => { active = false; clearTimeout(timer); };
+  }, [viewState, hasAllData, dashboardSnapshotUrl, snapshotUrl]);
 
   return (
     <TimeRangeProvider>
@@ -305,23 +536,31 @@ export function DashboardView() {
           <LandingView onFileSelect={handleFileSelect} />
         )}
 
-        {viewState === "dissolving" && (
-          <PixelTransition active={true} onComplete={handleDissolveComplete}>
-            <LandingView onFileSelect={handleFileSelect} />
-          </PixelTransition>
-        )}
-
         {viewState === "analyzing" && (
-          <div className="h-screen flex items-center justify-center">
-            <DotLoader />
-          </div>
+          <>
+            {/* Canvas: fine→coarse on landing snapshot, then coarse→fine on dashboard snapshot */}
+            <PixelizeEffect
+              snapshotUrl={snapshotUrl}
+              targetSnapshotUrl={dashboardSnapshotUrl}
+              onBeforeComplete={handleBeforeDashboardReveal}
+              onComplete={handleDashboardReveal}
+            />
+            {/* DotLoader hides 50ms before phase-out completes */}
+            {showDotLoader && (
+              <div className="fixed inset-0 z-[300] flex items-center justify-center pointer-events-none">
+                <DotLoader />
+              </div>
+            )}
+          </>
         )}
 
-        {viewState === "dashboard" && hasAllData && (
-          <>
+        {/* Dashboard content:
+            - "analyzing + hasAllData": rendered behind the PixelizeEffect canvas for capture
+            - "dashboard": fully visible */}
+        {((viewState === "analyzing" && !!hasAllData) || viewState === "dashboard") && result && derived && thresholds && (
+          <div ref={dashboardCaptureRef}>
             {/* ── Non-sticky header ── */}
             <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-              {/* ── Trip summary header (scrolls away) ── */}
               <div className="space-y-5 sm:space-y-6">
                 <div
                   className="animate-fade-up opacity-0 flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-2 px-0.5"
@@ -353,12 +592,6 @@ export function DashboardView() {
                   />
                 </div>
 
-                <div
-                  className="animate-fade-up opacity-0 flex justify-center py-1 sm:py-2"
-                  style={{ animationDelay: "150ms" }}
-                >
-                  <SafetyGauge score={result.safetyScore} size={180} strokeWidth={12} />
-                </div>
               </div>
             </div>
 
@@ -370,8 +603,11 @@ export function DashboardView() {
               derived={derived}
               thresholds={thresholds}
               onHomeClick={handleHomeClick}
+              dataSource={dataSource}
+              cobbResult={cobbResult}
+              cobbMetadata={cobbMetadata}
             />
-          </>
+          </div>
         )}
 
         {/* Error toast — shown on landing after a failed analysis */}
