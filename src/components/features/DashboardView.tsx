@@ -232,7 +232,6 @@ export function DashboardView() {
   const [viewState, setViewState] = useState<ViewState>("landing");
   const pendingFileRef = useRef<File | null>(null);
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<OBD2AnalysisResult | null>(null);
   const [timeSeries, setTimeSeries] = useState<OBD2DataPoint[]>([]);
   const [gps, setGps] = useState<GPSDataPoint[]>([]);
@@ -241,7 +240,6 @@ export function DashboardView() {
   const [error, setError] = useState<string | null>(null);
 
   const analyzeFile = useCallback(async (file: File) => {
-    setIsAnalyzing(true);
     setError(null);
     try {
       const formData = new FormData();
@@ -269,8 +267,6 @@ export function DashboardView() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
       setViewState("landing");
-    } finally {
-      setIsAnalyzing(false);
     }
   }, []); // empty deps — all deps are stable state setters from useState
 
