@@ -89,6 +89,47 @@ export interface OBD2DataPoint {
 
   // Electrical System Parameters
   batteryVoltage?: number;
+
+  // COBB Accessport Parameters
+  acCompressorSw?: number;       // 1=on, 0=off
+  afCorrection1?: number;        // %
+  afCorrection3?: number;        // %
+  afLearning1?: number;          // %
+  afLearning3?: number;          // %
+  afSens1Ratio?: number;         // AFR
+  avcsExhLeft?: number;          // degrees
+  avcsInLeft?: number;           // degrees
+  baroPressurePsi?: number;      // psi
+  boostPsi?: number;             // psi
+  clFuelTarget?: number;         // AFR
+  calculatedLoadGRev?: number;   // g/rev (different from OBD2 engineLoad %)
+  commFuelFinal?: number;        // AFR
+  dam?: number;                  // Dynamic Advance Multiplier (0-1)
+  egrCommanded?: number;         // steps
+  feedbackKnock?: number;        // degrees
+  fineKnockLearn?: number;       // degrees
+  fuelCut?: number;              // cylinders cut
+  fuelPressurePsi?: number;      // psi
+  fuelPressureTargetPsi?: number; // psi
+  gearPosition?: number;         // gear number
+  ignCompIat?: number;           // degrees
+  injDutyCycle?: number;         // %
+  injPulseWidth?: number;        // ms
+  injTimingHSoi?: number;        // degrees
+  intakeTempManifold?: number;   // C
+  mafFreqKhz?: number;           // kHz
+  manifoldAbsPressPsi?: number;  // psi
+  reqTorqueNm?: number;          // Nm
+  reqTorqueBstTargetsNm?: number; // Nm
+  tdBoostErrorPsi?: number;      // psi
+  tdIntegWgPosCorrMm?: number;   // mm
+  tdPropWgPosCorrMm?: number;    // mm
+  tgvMapRatio?: number;          // multiplier
+  targetBoostFinalRelPsi?: number; // psi
+  wastegateInitPosFinalMm?: number; // mm
+  wastegateActualPosMm?: number; // mm
+  wastegateCommPosMm?: number;   // mm
+  wastegateCommFinalPosMm?: number; // mm
 }
 
 // ── Category Metric Interfaces ──
@@ -179,6 +220,67 @@ export interface ElectricalMetrics {
   maxBatteryVoltage: number | null;
 }
 
+// ── COBB-Specific Metric Interfaces ──
+
+export interface CobbBoostMetrics {
+  avgBoostPsi: number | null;
+  maxBoostPsi: number | null;
+  avgTargetBoostPsi: number | null;
+  maxTargetBoostPsi: number | null;
+  avgBoostErrorPsi: number | null;
+  maxBoostErrorPsi: number | null;
+}
+
+export interface CobbKnockMetrics {
+  knockEventCount: number;        // samples where feedbackKnock < -0.5
+  avgFeedbackKnock: number | null;
+  minFeedbackKnock: number | null; // most negative = worst knock
+  avgFineKnockLearn: number | null;
+  minFineKnockLearn: number | null;
+  avgDAM: number | null;
+  minDAM: number | null;           // DAM < 1.0 = knock retard active
+}
+
+export interface CobbAFRMetrics {
+  avgAFR: number | null;
+  avgAFRTarget: number | null;
+  avgAFRDeviation: number | null;  // abs(AFR - target)
+  maxAFRDeviation: number | null;
+  avgAFCorrection1: number | null;
+  avgAFLearning1: number | null;
+}
+
+export interface CobbWastegateMetrics {
+  avgWastegateActualMm: number | null;
+  maxWastegateActualMm: number | null;
+  avgWastegateTargetMm: number | null;
+  avgWastegateErrorMm: number | null; // actual - target
+}
+
+export interface CobbInjectorMetrics {
+  avgInjDutyCycle: number | null;
+  maxInjDutyCycle: number | null;
+  avgInjPulseWidthMs: number | null;
+  maxInjPulseWidthMs: number | null;
+  fuelCutEventCount: number;
+}
+
+export interface CobbAVCSMetrics {
+  avgAvcsExhLeft: number | null;
+  maxAvcsExhLeft: number | null;
+  avgAvcsInLeft: number | null;
+  maxAvcsInLeft: number | null;
+}
+
+export interface CobbAnalysisResult {
+  boost: CobbBoostMetrics;
+  knock: CobbKnockMetrics;
+  afr: CobbAFRMetrics;
+  wastegate: CobbWastegateMetrics;
+  injector: CobbInjectorMetrics;
+  avcs: CobbAVCSMetrics;
+}
+
 // ── Main Analysis Result ──
 
 export interface OBD2AnalysisResult {
@@ -239,6 +341,16 @@ export interface UploadedFile {
   size: number;
   type: string;
   content: string | ArrayBuffer;
+}
+
+// ── Data Source ──
+
+export type DataSource = 'obd2' | 'cobb' | 'unknown';
+
+export interface CobbMetadata {
+  apVersion?: string;      // e.g. "AP3-SUB-006 v1.7.5.0-25910"
+  vehicle?: string;        // e.g. "2023 USDM WRX MT"
+  tune?: string;           // e.g. "Reflash: Stage1 93 v310.ptm"
 }
 
 // ── GPS Data ──
@@ -370,4 +482,7 @@ export interface ExtendedAnalysisResponse {
   gps: GPSDataPoint[];
   derived: DerivedMetrics;
   thresholds: ThresholdConfig;
+  dataSource?: DataSource;          // new, optional until Task 6 lands
+  cobbResult?: CobbAnalysisResult;  // new, only when dataSource === 'cobb'
+  cobbMetadata?: CobbMetadata;      // new, only when dataSource === 'cobb'
 }
