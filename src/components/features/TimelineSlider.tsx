@@ -21,9 +21,10 @@ function formatElapsed(seconds: number): string {
 
 interface TimelineSliderProps {
   timeSeries: OBD2DataPoint[];
+  onHomeClick?: () => void;
 }
 
-export function TimelineSlider({ timeSeries }: TimelineSliderProps) {
+export function TimelineSlider({ timeSeries, onHomeClick }: TimelineSliderProps) {
   const { timeRange, setTimeRange, resetTimeRange, isRangeActive } = useTimeRange();
 
   const trackRef = useRef<HTMLDivElement>(null);
@@ -232,6 +233,30 @@ export function TimelineSlider({ timeSeries }: TimelineSliderProps) {
           >
             Reset
           </button>
+
+          {/* Home button */}
+          {onHomeClick && (
+            <button
+              type="button"
+              onClick={onHomeClick}
+              aria-label="Return to landing"
+              className="shrink-0 p-1.5 rounded border border-sapphire-700/40 text-sapphire-400 hover:text-sapphire-200 hover:border-sapphire-600/40 transition-colors"
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
     </div>

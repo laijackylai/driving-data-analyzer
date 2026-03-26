@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { TimeRangeProvider } from "@/hooks/useTimeRange";
 import { TimelineSlider } from "@/components/features/TimelineSlider";
@@ -25,6 +26,14 @@ function renderSlider(timeSeries: OBD2DataPoint[]) {
   return render(
     React.createElement(TimeRangeProvider, null,
       React.createElement(TimelineSlider, { timeSeries })
+    )
+  );
+}
+
+function renderSliderWithHome(timeSeries: OBD2DataPoint[], onHomeClick: () => void) {
+  return render(
+    React.createElement(TimeRangeProvider, null,
+      React.createElement(TimelineSlider, { timeSeries, onHomeClick })
     )
   );
 }
@@ -77,5 +86,25 @@ describe("TimelineSlider", () => {
     // Check that colored segments exist (inline background-color style)
     const colored = container.querySelectorAll("[style*='background-color']");
     expect(colored.length).toBeGreaterThan(0);
+  });
+});
+
+describe("TimelineSlider home button", () => {
+  it("renders a home button when onHomeClick is provided", () => {
+    renderSliderWithHome(buildTimeSeries(), vi.fn());
+    expect(screen.getByRole("button", { name: /return to landing/i })).toBeInTheDocument();
+  });
+
+  it("does not render home button when onHomeClick is not provided", () => {
+    renderSlider(buildTimeSeries());
+    expect(screen.queryByRole("button", { name: /return to landing/i })).not.toBeInTheDocument();
+  });
+
+  it("calls onHomeClick when pressed", async () => {
+    const user = userEvent.setup();
+    const onHomeClick = vi.fn();
+    renderSliderWithHome(buildTimeSeries(), onHomeClick);
+    await user.click(screen.getByRole("button", { name: /return to landing/i }));
+    expect(onHomeClick).toHaveBeenCalledTimes(1);
   });
 });
