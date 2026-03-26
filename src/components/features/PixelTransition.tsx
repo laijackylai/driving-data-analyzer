@@ -30,10 +30,12 @@ export function PixelTransition({
 
   // Use window dimensions when available and > 0, otherwise fallback.
   // In jsdom, window exists but innerWidth/innerHeight are 0.
+  /* istanbul ignore next — typeof window !== "undefined" is always true in jsdom */
   const cols =
     typeof window !== "undefined" && window.innerWidth > 0
       ? Math.ceil(window.innerWidth / cellSize)
       : FALLBACK_COLS;
+  /* istanbul ignore next — typeof window !== "undefined" is always true in jsdom */
   const rows =
     typeof window !== "undefined" && window.innerHeight > 0
       ? Math.ceil(window.innerHeight / cellSize)

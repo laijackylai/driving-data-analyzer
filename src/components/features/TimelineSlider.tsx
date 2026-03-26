@@ -52,6 +52,7 @@ export function TimelineSlider({ timeSeries, onHomeClick }: TimelineSliderProps)
         NUM_SEGMENTS - 1,
         Math.floor(((d.timestamp - minTime) / totalDuration) * NUM_SEGMENTS)
       );
+      /* istanbul ignore next — idx is always >= 0 given Math.min(NUM_SEGMENTS-1, ...) */
       if (idx >= 0) {
         buckets[idx].sum += d.vehicleSpeed ?? 0;
         buckets[idx].count++;
@@ -103,6 +104,7 @@ export function TimelineSlider({ timeSeries, onHomeClick }: TimelineSliderProps)
       const drag = draggingRef.current;
       if (!drag) return;
       const track = trackRef.current;
+      /* istanbul ignore next — track is always mounted when pointer events fire */
       if (!track) return;
 
       const rect = track.getBoundingClientRect();

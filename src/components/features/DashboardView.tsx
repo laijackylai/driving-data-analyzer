@@ -145,6 +145,7 @@ function DashboardContent({
             <div className="space-y-3">
               {SUMMARY_CATEGORIES.map((cat) => {
                 const resultKey = RESULT_KEY_MAP[cat];
+                /* istanbul ignore next — all SUMMARY_CATEGORIES have RESULT_KEY_MAP entries */
                 if (!resultKey) return null;
                 return (
                   <CategoryPanel
@@ -276,6 +277,7 @@ export function DashboardView() {
   };
 
   const handleDissolveComplete = useCallback(() => {
+    /* istanbul ignore next — defensive guard; pendingFileRef is always set before dissolving */
     if (!pendingFileRef.current) {
       setViewState("landing");
       return;

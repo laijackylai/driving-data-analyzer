@@ -80,4 +80,40 @@ describe("PixelTransition", () => {
     );
     expect(screen.getByText("Hello")).toBeInTheDocument();
   });
+
+  it("uses window dimensions when innerWidth and innerHeight are > 0", () => {
+    // Override jsdom's zero dimensions so the true branch of the cols/rows ternary runs
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 1200 });
+    Object.defineProperty(window, "innerHeight", { writable: true, configurable: true, value: 800 });
+
+    const { container } = render(
+      <PixelTransition active={true} onComplete={vi.fn()}>
+        <p>Hello</p>
+      </PixelTransition>
+    );
+    // cols = ceil(1200/24) = 50, rows = ceil(800/24) = 34 → 1700 cells
+    const cells = container.querySelectorAll("[data-testid='pixel-cell']");
+    expect(cells.length).toBe(Math.ceil(1200 / 24) * Math.ceil(800 / 24));
+
+    // Restore jsdom defaults
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 0 });
+    Object.defineProperty(window, "innerHeight", { writable: true, configurable: true, value: 0 });
+  });
+
+  it("uses custom cellSize to compute grid dimensions", () => {
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 480 });
+    Object.defineProperty(window, "innerHeight", { writable: true, configurable: true, value: 320 });
+
+    const cellSize = 40;
+    const { container } = render(
+      <PixelTransition active={true} onComplete={vi.fn()} cellSize={cellSize}>
+        <p>Hello</p>
+      </PixelTransition>
+    );
+    const cells = container.querySelectorAll("[data-testid='pixel-cell']");
+    expect(cells.length).toBe(Math.ceil(480 / cellSize) * Math.ceil(320 / cellSize));
+
+    Object.defineProperty(window, "innerWidth", { writable: true, configurable: true, value: 0 });
+    Object.defineProperty(window, "innerHeight", { writable: true, configurable: true, value: 0 });
+  });
 });

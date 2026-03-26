@@ -167,6 +167,56 @@ describe("LandingView", () => {
 
       expect(onFileSelect).toHaveBeenCalledWith(file);
     });
+
+    it("handleDragOver calls preventDefault to allow drop", () => {
+      const { container } = render(<LandingView onFileSelect={onFileSelect} />);
+      const root = container.firstChild as HTMLElement;
+
+      // dragover must not throw and must call preventDefault (fireEvent handles it)
+      expect(() => {
+        fireEvent.dragOver(root);
+      }).not.toThrow();
+    });
+
+    it("drop with no files does not call onFileSelect", () => {
+      const { container } = render(<LandingView onFileSelect={onFileSelect} />);
+      const root = container.firstChild as HTMLElement;
+
+      fireEvent.drop(root, { dataTransfer: { files: [] } });
+
+      expect(onFileSelect).not.toHaveBeenCalled();
+    });
+
+    it("file input onChange with no files does not call onFileSelect", () => {
+      const { container } = render(<LandingView onFileSelect={onFileSelect} />);
+      const input = container.querySelector("input[type='file']") as HTMLInputElement;
+
+      // Fire change event with empty FileList (files = null guard branch)
+      fireEvent.change(input, { target: { files: null } });
+
+      expect(onFileSelect).not.toHaveBeenCalled();
+    });
+
+    it("multiple dragEnter events only set isDragging on the first (counter > 1 branch)", () => {
+      const { container } = render(<LandingView onFileSelect={onFileSelect} />);
+      const root = container.firstChild as HTMLElement;
+
+      // First dragEnter: counter goes 0→1, sets isDragging
+      fireEvent.dragEnter(root);
+      expect(screen.getByText(/drop csv file/i)).toBeInTheDocument();
+
+      // Second dragEnter: counter goes 1→2, isDragging already true — no state change
+      fireEvent.dragEnter(root);
+      expect(screen.getByText(/drop csv file/i)).toBeInTheDocument();
+
+      // First dragLeave: counter goes 2→1, still > 0 — overlay stays
+      fireEvent.dragLeave(root);
+      expect(screen.getByText(/drop csv file/i)).toBeInTheDocument();
+
+      // Second dragLeave: counter goes 1→0, hides overlay
+      fireEvent.dragLeave(root);
+      expect(screen.queryByText(/drop csv file/i)).not.toBeInTheDocument();
+    });
   });
 
   describe("layout", () => {
