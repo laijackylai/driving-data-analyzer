@@ -240,7 +240,7 @@ export function DashboardView() {
   const [thresholds, setThresholds] = useState<ThresholdConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const analyzeFile = async (file: File) => {
+  const analyzeFile = useCallback(async (file: File) => {
     setIsAnalyzing(true);
     setError(null);
     try {
@@ -272,7 +272,7 @@ export function DashboardView() {
     } finally {
       setIsAnalyzing(false);
     }
-  };
+  }, []); // empty deps — all deps are stable state setters from useState
 
   const handleFileSelect = (file: File) => {
     pendingFileRef.current = file;
@@ -280,11 +280,13 @@ export function DashboardView() {
   };
 
   const handleDissolveComplete = useCallback(() => {
-    setViewState("analyzing");
-    if (pendingFileRef.current) {
-      analyzeFile(pendingFileRef.current);
+    if (!pendingFileRef.current) {
+      setViewState("landing");
+      return;
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    setViewState("analyzing");
+    analyzeFile(pendingFileRef.current);
+  }, [analyzeFile]);
 
   const handleHomeClick = useCallback(() => {
     setResult(null);
