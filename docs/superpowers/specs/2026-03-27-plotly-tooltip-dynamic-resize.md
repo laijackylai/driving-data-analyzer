@@ -57,7 +57,7 @@ hovertemplate: index === 0
 
 **Change 2 — suppress raw x-axis unified header in layout memo:**
 
-Add `hoverformat: " "` to the `xaxis` override in the layout memo:
+Add `hoverformat: ""` (empty string) to the `xaxis` override in the layout memo:
 
 ```tsx
 xaxis: {
