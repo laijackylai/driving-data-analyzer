@@ -5,6 +5,8 @@ import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
+import { MetricTooltip } from "@/components/ui/MetricTooltip";
+import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface CobbWastegateTabProps {
   timeSeries: OBD2DataPoint[];
@@ -23,7 +25,7 @@ export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
         <CobbStatCard label="Avg Error (actual−target)" value={stats.avgWastegateErrorMm} unit="mm" />
       </div>
 
-      <ChartWrapper title="Wastegate Position — Actual vs Target" height={280}>
+      <ChartWrapper title="Wastegate Position — Actual vs Target" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbWastegate} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[

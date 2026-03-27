@@ -5,6 +5,8 @@ import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
+import { MetricTooltip } from "@/components/ui/MetricTooltip";
+import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface CobbKnockTabProps {
   timeSeries: OBD2DataPoint[];
@@ -25,7 +27,7 @@ export function CobbKnockTab({ timeSeries, stats }: CobbKnockTabProps) {
         <CobbStatCard label="Avg DAM" value={stats.avgDAM} />
       </div>
 
-      <ChartWrapper title="Feedback Knock Over Time" height={260}>
+      <ChartWrapper title="Feedback Knock Over Time" height={260} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbFeedbackKnock} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -37,7 +39,7 @@ export function CobbKnockTab({ timeSeries, stats }: CobbKnockTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="Fine Knock Learn Over Time" height={240}>
+      <ChartWrapper title="Fine Knock Learn Over Time" height={240} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbFineKnockLearn} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -49,7 +51,7 @@ export function CobbKnockTab({ timeSeries, stats }: CobbKnockTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="Dynamic Advance Multiplier (DAM)" height={240}>
+      <ChartWrapper title="Dynamic Advance Multiplier (DAM)" height={240} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbDAM} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[

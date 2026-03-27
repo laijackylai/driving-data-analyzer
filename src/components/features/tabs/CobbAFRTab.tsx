@@ -6,6 +6,8 @@ import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { ScatterChart } from "@/components/features/charts/ScatterChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
+import { MetricTooltip } from "@/components/ui/MetricTooltip";
+import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface CobbAFRTabProps {
   timeSeries: OBD2DataPoint[];
@@ -26,7 +28,7 @@ export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
         <CobbStatCard label="Avg AF Learning 1" value={stats.avgAFLearning1} unit="%" />
       </div>
 
-      <ChartWrapper title="AFR — Actual vs Target" height={280}>
+      <ChartWrapper title="AFR — Actual vs Target" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbAFR} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -39,7 +41,7 @@ export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="AF Correction & Learning" height={240}>
+      <ChartWrapper title="AF Correction & Learning" height={240} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbAFCorrection} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -52,7 +54,7 @@ export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="AFR vs RPM" height={280}>
+      <ChartWrapper title="AFR vs RPM" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbAFRScatter} />}>
         <ScatterChart
           data={timeSeries}
           xField="engineRpm"

@@ -6,6 +6,8 @@ import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { ScatterChart } from "@/components/features/charts/ScatterChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
+import { MetricTooltip } from "@/components/ui/MetricTooltip";
+import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface CobbBoostTabProps {
   timeSeries: OBD2DataPoint[];
@@ -26,7 +28,7 @@ export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
         <CobbStatCard label="Max Error" value={stats.maxBoostErrorPsi} unit="psi" />
       </div>
 
-      <ChartWrapper title="Boost Pressure — Actual vs Target" height={280}>
+      <ChartWrapper title="Boost Pressure — Actual vs Target" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbBoost} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -40,7 +42,7 @@ export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="Boost Error Over Time" height={240}>
+      <ChartWrapper title="Boost Error Over Time" height={240} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbBoostError} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -52,7 +54,7 @@ export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="Boost vs RPM" height={280}>
+      <ChartWrapper title="Boost vs RPM" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbBoostScatter} />}>
         <ScatterChart
           data={timeSeries}
           xField="engineRpm"

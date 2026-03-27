@@ -6,6 +6,8 @@ import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { ScatterChart } from "@/components/features/charts/ScatterChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
+import { MetricTooltip } from "@/components/ui/MetricTooltip";
+import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
 interface CobbInjectorTabProps {
   timeSeries: OBD2DataPoint[];
@@ -25,7 +27,7 @@ export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
         <CobbStatCard label="Fuel Cut Events" value={stats.fuelCutEventCount} />
       </div>
 
-      <ChartWrapper title="Injector Duty Cycle Over Time" height={260}>
+      <ChartWrapper title="Injector Duty Cycle Over Time" height={260} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbInjDutyCycle} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -37,7 +39,7 @@ export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="Injector Pulse Width Over Time" height={240}>
+      <ChartWrapper title="Injector Pulse Width Over Time" height={240} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbInjPulseWidth} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
@@ -49,7 +51,7 @@ export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
         />
       </ChartWrapper>
 
-      <ChartWrapper title="Injector Duty Cycle vs RPM" height={280}>
+      <ChartWrapper title="Injector Duty Cycle vs RPM" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbInjScatter} />}>
         <ScatterChart
           data={timeSeries}
           xField="engineRpm"
