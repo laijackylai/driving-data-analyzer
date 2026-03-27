@@ -41,6 +41,12 @@ import { ABSTab } from "@/components/features/tabs/ABSTab";
 import { AWDTab } from "@/components/features/tabs/AWDTab";
 import { ElectricalTab } from "@/components/features/tabs/ElectricalTab";
 import { AirIntakeTab } from "@/components/features/tabs/AirIntakeTab";
+import { CobbBoostTab } from "@/components/features/tabs/CobbBoostTab";
+import { CobbKnockTab } from "@/components/features/tabs/CobbKnockTab";
+import { CobbAFRTab } from "@/components/features/tabs/CobbAFRTab";
+import { CobbWastegateTab } from "@/components/features/tabs/CobbWastegateTab";
+import { CobbInjectorTab } from "@/components/features/tabs/CobbInjectorTab";
+import { CobbAVCSTab } from "@/components/features/tabs/CobbAVCSTab";
 
 // ── View state machine ──
 
@@ -61,11 +67,19 @@ const RESULT_KEY_MAP: Partial<Record<(typeof CATEGORY_ORDER)[number], keyof OBD2
 // Categories that appear in the summary grid (have CategoryPanel data)
 const SUMMARY_CATEGORIES = ["engine", "fuel", "transmission", "power", "abs", "awd", "electrical", "airIntake"] as const;
 
-// Section IDs in scroll order — matches CATEGORY_ORDER
-const SECTION_IDS = CATEGORY_ORDER as readonly string[];
-
 // scroll-margin-top to account for sticky tab bar (~52px)
 const SCROLL_MARGIN = "scroll-mt-14";
+
+// Categories that only appear in OBD2 mode (hidden for COBB files)
+const OBD2_ONLY_CATS = new Set([
+  "engine", "fuel", "transmission", "power", "drivingBehavior",
+  "abs", "awd", "electrical", "airIntake",
+]);
+
+// Categories that only appear in COBB mode (hidden for OBD2 files)
+const COBB_ONLY_CATS = new Set([
+  "cobbBoost", "cobbKnock", "cobbAFR", "cobbWastegate", "cobbInjector", "cobbAVCS",
+]);
 
 function DashboardContent({
   result,
@@ -88,8 +102,12 @@ function DashboardContent({
   cobbResult: CobbAnalysisResult | null;
   cobbMetadata: CobbMetadata | null;
 }) {
-  const { activeSection, scrollToSection } = useActiveSection(SECTION_IDS);
   const hasChartData = timeSeries.length > 0;
+
+  const visibleCategories = CATEGORY_ORDER.filter((cat) =>
+    dataSource === "cobb" ? !OBD2_ONLY_CATS.has(cat) : !COBB_ONLY_CATS.has(cat)
+  );
+  const { activeSection, scrollToSection } = useActiveSection(visibleCategories as readonly string[]);
 
   return (
     <>
@@ -111,7 +129,7 @@ function DashboardContent({
               className="flex gap-1 overflow-x-auto px-1 py-2 scrollbar-none"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              {CATEGORY_ORDER.map((cat) => {
+              {visibleCategories.map((cat) => {
                 const isActive = activeSection === cat;
                 return (
                   <button
@@ -174,214 +192,107 @@ function DashboardContent({
           )}
         </section>
 
-        {/* #engine */}
-        <section id="engine" className={SCROLL_MARGIN}>
-          {hasChartData && (
-            <EngineTab timeSeries={timeSeries} thresholds={thresholds} />
-          )}
-        </section>
+        {/* OBD2-only sections — not rendered for COBB files */}
+        {dataSource !== "cobb" && (
+          <>
+            {/* #engine */}
+            <section id="engine" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <EngineTab timeSeries={timeSeries} thresholds={thresholds} />
+              )}
+            </section>
 
-        {/* #fuel */}
-        <section id="fuel" className={SCROLL_MARGIN}>
-          {hasChartData && (
-            <FuelTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
-          )}
-        </section>
+            {/* #fuel */}
+            <section id="fuel" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <FuelTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
+              )}
+            </section>
 
-        {/* #transmission */}
-        <section id="transmission" className={SCROLL_MARGIN}>
-          {hasChartData && (
-            <TransmissionTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
-          )}
-        </section>
+            {/* #transmission */}
+            <section id="transmission" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <TransmissionTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
+              )}
+            </section>
 
-        {/* #power */}
-        <section id="power" className={SCROLL_MARGIN}>
-          {hasChartData && <PowerTab timeSeries={timeSeries} />}
-        </section>
+            {/* #power */}
+            <section id="power" className={SCROLL_MARGIN}>
+              {hasChartData && <PowerTab timeSeries={timeSeries} />}
+            </section>
 
-        {/* #drivingBehavior */}
-        <section id="drivingBehavior" className={SCROLL_MARGIN}>
-          {hasChartData && <DrivingBehaviorTab timeSeries={timeSeries} />}
-        </section>
+            {/* #drivingBehavior */}
+            <section id="drivingBehavior" className={SCROLL_MARGIN}>
+              {hasChartData && <DrivingBehaviorTab timeSeries={timeSeries} />}
+            </section>
 
-        {/* #abs */}
-        <section id="abs" className={SCROLL_MARGIN}>
-          {hasChartData && <ABSTab timeSeries={timeSeries} derived={derived} />}
-        </section>
+            {/* #abs */}
+            <section id="abs" className={SCROLL_MARGIN}>
+              {hasChartData && <ABSTab timeSeries={timeSeries} derived={derived} />}
+            </section>
 
-        {/* #awd */}
-        <section id="awd" className={SCROLL_MARGIN}>
-          {hasChartData && <AWDTab timeSeries={timeSeries} />}
-        </section>
+            {/* #awd */}
+            <section id="awd" className={SCROLL_MARGIN}>
+              {hasChartData && <AWDTab timeSeries={timeSeries} />}
+            </section>
 
-        {/* #electrical */}
-        <section id="electrical" className={SCROLL_MARGIN}>
-          {hasChartData && <ElectricalTab timeSeries={timeSeries} thresholds={thresholds} />}
-        </section>
+            {/* #electrical */}
+            <section id="electrical" className={SCROLL_MARGIN}>
+              {hasChartData && <ElectricalTab timeSeries={timeSeries} thresholds={thresholds} />}
+            </section>
 
-        {/* #airIntake */}
-        <section id="airIntake" className={SCROLL_MARGIN}>
-          {hasChartData && <AirIntakeTab timeSeries={timeSeries} thresholds={thresholds} />}
-        </section>
+            {/* #airIntake */}
+            <section id="airIntake" className={SCROLL_MARGIN}>
+              {hasChartData && <AirIntakeTab timeSeries={timeSeries} thresholds={thresholds} />}
+            </section>
+          </>
+        )}
 
-        {/* COBB Accessport Data — only when dataSource is cobb */}
+        {/* COBB-only sections — not rendered for OBD2 files */}
         {dataSource === "cobb" && cobbResult && (
-          <section className="mt-6">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
-              COBB Accessport
-            </h2>
-            {cobbMetadata?.vehicle && (
-              <p className="text-sm text-muted-foreground font-mono mb-4">
-                {cobbMetadata.vehicle}{cobbMetadata.tune ? ` · ${cobbMetadata.tune}` : ""}
-              </p>
-            )}
-            <div className="space-y-6">
-              {/* Chart 1 — Boost Curve */}
-              <div>
-                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Boost Curve</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Boost</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.boost.avgBoostPsi != null ? `${cobbResult.boost.avgBoostPsi} psi` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Max Boost</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.boost.maxBoostPsi != null ? `${cobbResult.boost.maxBoostPsi} psi` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Max Boost Error</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.boost.maxBoostErrorPsi != null ? `${cobbResult.boost.maxBoostErrorPsi} psi` : "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+          <>
+            {/* #cobbBoost */}
+            <section id="cobbBoost" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbBoostTab timeSeries={timeSeries} stats={cobbResult.boost} />
+              )}
+            </section>
 
-              {/* Chart 2 — Knock */}
-              <div>
-                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Knock Events</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Knock Events</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.knock.knockEventCount}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Min Feedback Knock</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.knock.minFeedbackKnock != null ? `${cobbResult.knock.minFeedbackKnock}°` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Min DAM</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.knock.minDAM != null ? cobbResult.knock.minDAM : "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* #cobbKnock */}
+            <section id="cobbKnock" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbKnockTab timeSeries={timeSeries} stats={cobbResult.knock} />
+              )}
+            </section>
 
-              {/* Chart 3 — AFR */}
-              <div>
-                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">AFR vs Target</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg AFR</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.afr.avgAFR != null ? cobbResult.afr.avgAFR : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Target AFR</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.afr.avgAFRTarget != null ? cobbResult.afr.avgAFRTarget : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Max AFR Deviation</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.afr.maxAFRDeviation != null ? cobbResult.afr.maxAFRDeviation : "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* #cobbAFR */}
+            <section id="cobbAFR" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbAFRTab timeSeries={timeSeries} stats={cobbResult.afr} />
+              )}
+            </section>
 
-              {/* Chart 4 — Wastegate */}
-              <div>
-                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Wastegate Position</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Actual</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.wastegate.avgWastegateActualMm != null ? `${cobbResult.wastegate.avgWastegateActualMm} mm` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Max Actual</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.wastegate.maxWastegateActualMm != null ? `${cobbResult.wastegate.maxWastegateActualMm} mm` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Error</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.wastegate.avgWastegateErrorMm != null ? `${cobbResult.wastegate.avgWastegateErrorMm} mm` : "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* #cobbWastegate */}
+            <section id="cobbWastegate" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbWastegateTab timeSeries={timeSeries} stats={cobbResult.wastegate} />
+              )}
+            </section>
 
-              {/* Chart 5 — Injector */}
-              <div>
-                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">Injector</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Duty Cycle</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.injector.avgInjDutyCycle != null ? `${cobbResult.injector.avgInjDutyCycle}%` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Max Duty Cycle</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.injector.maxInjDutyCycle != null ? `${cobbResult.injector.maxInjDutyCycle}%` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Fuel Cut Events</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.injector.fuelCutEventCount}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* #cobbInjector */}
+            <section id="cobbInjector" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbInjectorTab timeSeries={timeSeries} stats={cobbResult.injector} />
+              )}
+            </section>
 
-              {/* Chart 6 — AVCS */}
-              <div>
-                <h3 className="text-sm font-semibold text-sapphire-300 mb-2">AVCS Cam Timing</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Intake</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.avcs.avgAvcsInLeft != null ? `${cobbResult.avcs.avgAvcsInLeft}°` : "—"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-sapphire-900/40 border border-glass-edge p-3">
-                    <p className="text-xs text-sapphire-500 mb-1">Avg Exhaust</p>
-                    <p className="text-lg font-mono font-semibold text-sapphire-100">
-                      {cobbResult.avcs.avgAvcsExhLeft != null ? `${cobbResult.avcs.avgAvcsExhLeft}°` : "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
+            {/* #cobbAVCS */}
+            <section id="cobbAVCS" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbAVCSTab timeSeries={timeSeries} stats={cobbResult.avcs} />
+              )}
+            </section>
+          </>
         )}
 
         {/* Session details — below last section, above timeline */}
