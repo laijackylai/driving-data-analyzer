@@ -109,7 +109,7 @@ export function ScatterChart({
     });
 
     return traces;
-  }, [data, xField, yField, colorField, timeRange, yLabel]);
+  }, [data, xField, yField, colorField, timeRange, xLabel, yLabel]);
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
