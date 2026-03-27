@@ -41,6 +41,7 @@ export function HistogramChart({
       nbinsx: bins,
       name: xLabel ?? "Distribution",
       marker: { color: CHART_COLORS.primaryFill, line: { color: CHART_COLORS.primary, width: 1 } },
+      hovertemplate: `${xLabel ?? "Value"}: %{x}<br>Count: %{y}<extra></extra>`,
     },
   ], [data, bins, xLabel]);
 
