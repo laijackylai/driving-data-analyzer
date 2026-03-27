@@ -37,18 +37,7 @@ Long-term (%): −1.50    ← metric name: value
 
 ### `src/lib/chartTheme.ts`
 
-Add `namelength: -1` to the `hoverlabel` block in `BASE_LAYOUT`:
-
-```ts
-hoverlabel: {
-  bgcolor: "rgba(15, 34, 64, 0.95)",
-  bordercolor: "rgba(54, 112, 198, 0.3)",
-  font: { ... },
-  namelength: -1,   // ← add: show full trace name, no truncation
-},
-```
-
-This applies globally to all charts. For charts using `hovermode: "closest"` (ScatterChart, BarChart, AreaChart, HistogramChart) it only improves trace-name display — no behaviour change.
+No changes required. All chart `hovertemplate` strings already use `<extra></extra>` to suppress the coloured trace-name badge, so Plotly's `namelength` truncation does not apply.
 
 ### `src/components/features/charts/TimeSeriesChart.tsx`
 
@@ -75,14 +64,14 @@ xaxis: {
   ...BASE_LAYOUT.xaxis,
   type: "linear",
   title: { ... },
-  hoverformat: " ",   // ← suppress the raw-seconds unified header
+  hoverformat: "",   // ← suppress the raw-seconds unified header
   range: xAxisRange,
   tickvals,
   ticktext,
 },
 ```
 
-`hoverformat: " "` causes Plotly to render the unified header as a single space, effectively hiding the raw elapsed-seconds value while keeping the unified hover box layout intact.
+`hoverformat: ""` (empty string) causes Plotly to render the unified header as blank, hiding the raw elapsed-seconds value while keeping the unified hover box layout intact.
 
 ---
 
@@ -90,13 +79,16 @@ xaxis: {
 
 | File | Change |
 |------|--------|
-| `src/lib/chartTheme.ts` | Add `namelength: -1` to `hoverlabel` |
-| `src/components/features/charts/TimeSeriesChart.tsx` | Index-aware `hovertemplate` + `hoverformat: " "` on xaxis |
+| `src/components/features/charts/TimeSeriesChart.tsx` | Index-aware `hovertemplate` + `hoverformat: ""` on xaxis |
+
+`src/lib/chartTheme.ts` — no changes needed.
 
 No changes to ScatterChart, BarChart, AreaChart, HistogramChart, or any tab components.
 
 ---
 
-## Known Limitation
+## Known Limitations
 
-If the first trace (`index === 0`) has no defined data points at the hovered x position, the time line will not appear. In practice this is acceptable: TimeSeriesChart always has a primary trace and the first trace is rarely absent at a valid hover point.
+**Time header can disappear mid-hover.** Each trace is independently LTTB-downsampled using its own field as the importance signal (source: `TimeSeriesChart.tsx` lines 43–45). This means trace 0's x-coordinates after downsampling do not align with those of other traces. When the user hovers over a point that exists in trace 1+ but not in trace 0's downsampled set, Plotly has no row to render for trace 0 — so the time line is silently absent. This is an ordinary-use scenario, not a rare edge case. The result is a tooltip showing `name: value` rows without a time header. Acceptable as a known constraint of the index-0 approach.
+
+**Event markers appear in the unified tooltip.** The event markers trace uses `hoverinfo: "text"`, which in `x unified` mode shows the event label (e.g., "Harsh braking") as a row in the shared tooltip box. This is intentional and desirable — it gives context when hovering near an event marker. No change needed.
