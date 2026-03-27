@@ -55,7 +55,7 @@ export function ChartWrapper({
     if (!container) return;
 
     const isReady = () =>
-      !!container.querySelector(".js-plotly-plot, .leaflet-container, [data-insufficient]");
+      !!container.querySelector(".js-plotly-plot, .leaflet-container, [data-insufficient], [data-chart-empty]");
 
     if (isReady()) {
       setChartReady(true);
@@ -73,7 +73,18 @@ export function ChartWrapper({
     return () => observer.disconnect();
   }, [hasEntered]);
 
+  const [isEmpty, setIsEmpty] = useState(false);
+
+  useEffect(() => {
+    if (!chartReady) return;
+    const container = containerRef.current;
+    if (!container) return;
+    setIsEmpty(!!container.querySelector("[data-chart-empty]"));
+  }, [chartReady]);
+
   const showSkeleton = loading || !hasEntered || !chartReady;
+
+  if (isEmpty) return null;
 
   return (
     <div

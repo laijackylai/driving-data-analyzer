@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
-import { InsufficientData } from "@/components/ui/InsufficientData";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -14,7 +13,6 @@ interface BarChartProps {
 }
 
 export function BarChart({ data, yLabel, height = 300 }: BarChartProps) {
-  const [forceRender, setForceRender] = useState(false);
   const plotTraces = useMemo<Plotly.Data[]>(() => [
     {
       x: data.map((d) => d.label),
@@ -42,9 +40,7 @@ export function BarChart({ data, yLabel, height = 300 }: BarChartProps) {
     },
   }), [height, yLabel]);
 
-  if (data.length === 0 && !forceRender) {
-    return <InsufficientData available={0} total={0} height={height} onForceRender={() => setForceRender(true)} />;
-  }
+  if (data.length === 0) return <div data-chart-empty className="hidden" />;
 
   return (
     <Plot

@@ -73,6 +73,8 @@ export function HistogramChart({
     };
   }, [highlightRanges, height, xLabel]);
 
+  if (data.length === 0) return <div data-chart-empty className="hidden" />;
+
   if (data.length < 2 && !forceRender) {
     return <InsufficientData available={data.length} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
   }

@@ -42,7 +42,7 @@ export function CategoryPanel({ category, metrics }: CategoryPanelProps) {
           <CategoryIcon category={category} size={20} />
         </div>
         <div className="min-w-0">
-          <h2 className="font-display text-base font-semibold text-sapphire-100 leading-tight">
+          <h2 className="font-brand text-lg font-black text-sapphire-100 leading-tight">
             {CATEGORY_LABELS[category]}
           </h2>
           <p className="text-xs text-sapphire-500 mt-0.5 leading-relaxed">

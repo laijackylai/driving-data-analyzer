@@ -128,7 +128,9 @@ export function ScatterChart({
     return data.filter((d) => d[xField] !== undefined && d[yField] !== undefined).length;
   }, [data, xField, yField]);
 
-  if (!forceRender && (data.length === 0 || validCount / data.length < INSUFFICIENT_DATA_THRESHOLD)) {
+  if (validCount === 0) return <div data-chart-empty className="hidden" />;
+
+  if (!forceRender && validCount / data.length < INSUFFICIENT_DATA_THRESHOLD) {
     return <InsufficientData available={validCount} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
   }
 

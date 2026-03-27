@@ -14,9 +14,9 @@ describe("Font configuration", () => {
     expect(fontFamily.body[0]).toBe("var(--font-geist-sans)");
   });
 
-  it("preserves display font family (Outfit)", () => {
+  it("defines display font family using Geist Sans", () => {
     expect(fontFamily.display).toBeDefined();
-    expect(fontFamily.display[0]).toBe("var(--font-outfit)");
+    expect(fontFamily.display[0]).toBe("var(--font-geist-sans)");
   });
 
   it("preserves mono font family (JetBrains Mono)", () => {

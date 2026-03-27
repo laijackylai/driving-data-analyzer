@@ -42,6 +42,8 @@ export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps
     },
   }), [height, xLabel, yLabel]);
 
+  if (data.length === 0) return <div data-chart-empty className="hidden" />;
+
   if (data.length < 2 && !forceRender) {
     return <InsufficientData available={data.length} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
   }

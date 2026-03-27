@@ -154,6 +154,12 @@ export function TimeSeriesChart({
     });
   }, [data, traces]);
 
+  const totalDefined = useMemo(() =>
+    traces.reduce((sum, trace) => sum + data.filter((d) => typeof d[trace.field] === "number").length, 0),
+    [data, traces]);
+
+  if (totalDefined === 0) return <div data-chart-empty className="hidden" />;
+
   if (!hasEnoughData && !forceRender) {
     const best = traces.reduce((max, trace) => {
       const count = data.filter((d) => typeof d[trace.field] === "number").length;
