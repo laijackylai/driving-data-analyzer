@@ -53,6 +53,8 @@ export function TimeSeriesChart({
       return {
         x: xs,
         y: ys,
+        customdata: source.map((d) => [formatTimestamp(d.timestamp, startTime)]),
+        hovertemplate: `⏱ %{customdata[0]}<br>%{y:.2f}<extra>%{fullData.name}</extra>`,
         type: "scatter" as const,
         mode: trace.mode ?? "lines",
         name: trace.name,
