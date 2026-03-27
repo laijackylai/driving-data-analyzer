@@ -26,8 +26,9 @@ export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps
       name: yLabel ?? "Value",
       line: { color: CHART_COLORS.primary, width: 1.5 },
       fillcolor: CHART_COLORS.primaryFill,
+      hovertemplate: `${xLabel ?? "X"}: %{x:.2f}<br>${yLabel ?? "Y"}: %{y:.2f}<extra></extra>`,
     },
-  ], [data, yLabel]);
+  ], [data, xLabel, yLabel]);
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
