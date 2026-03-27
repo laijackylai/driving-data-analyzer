@@ -232,6 +232,20 @@ export type CategoryMetricsType =
   | AWDMetrics
   | ElectricalMetrics;
 
+// ── View State ──
+
+export type ViewState = "landing" | "dissolving" | "analyzing" | "dashboard";
+
+// ── Component Props ──
+
+export interface LandingViewProps {
+  onFileSelect: (file: File) => void;
+}
+
+export interface DotLoaderProps {
+  className?: string;
+}
+
 // ── File Upload ──
 
 export interface UploadedFile {

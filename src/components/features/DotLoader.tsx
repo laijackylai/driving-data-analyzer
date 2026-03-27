@@ -1,8 +1,5 @@
 import { cn } from "@/lib/utils";
-
-interface DotLoaderProps {
-  className?: string;
-}
+import { DotLoaderProps } from "@/types";
 
 const DELAYS = [0, 150, 300];
 

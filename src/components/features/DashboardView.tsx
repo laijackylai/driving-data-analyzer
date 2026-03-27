@@ -18,6 +18,7 @@ import {
   ThresholdConfig,
   ExtendedAnalysisResponse,
   CategoryMetricsType,
+  ViewState,
 } from "@/types";
 import { formatDuration } from "@/lib/utils";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -39,10 +40,6 @@ import { ABSTab } from "@/components/features/tabs/ABSTab";
 import { AWDTab } from "@/components/features/tabs/AWDTab";
 import { ElectricalTab } from "@/components/features/tabs/ElectricalTab";
 import { AirIntakeTab } from "@/components/features/tabs/AirIntakeTab";
-
-// ── View state machine ──
-
-type ViewState = "landing" | "dissolving" | "analyzing" | "dashboard";
 
 // RESULT_KEY_MAP maps category keys to OBD2AnalysisResult keys for CategoryPanel
 const RESULT_KEY_MAP: Partial<Record<(typeof CATEGORY_ORDER)[number], keyof OBD2AnalysisResult>> = {

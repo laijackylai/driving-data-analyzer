@@ -2,13 +2,13 @@
 
 import { useState, useRef, useCallback, DragEvent, ChangeEvent } from "react";
 import { cn } from "@/lib/utils";
+import { LandingViewProps } from "@/types";
 
 const EXAMPLE_CSV_PATH = "/examples/example-drive.csv";
 const EXAMPLE_CSV_NAME = "example-drive.csv";
-
-interface LandingViewProps {
-  onFileSelect: (file: File) => void;
-}
+const MAX_SIZE_MB = 10;
+const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+const ACCEPTED_EXTENSIONS = [".csv"];
 
 export function LandingView({ onFileSelect }: LandingViewProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -17,6 +17,20 @@ export function LandingView({ onFileSelect }: LandingViewProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCountRef = useRef(0);
 
+  const validateFile = (file: File): boolean => {
+    if (file.size > MAX_SIZE_BYTES) {
+      setError(`File size exceeds ${MAX_SIZE_MB}MB limit`);
+      return false;
+    }
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+      setError(`Only ${ACCEPTED_EXTENSIONS.join(", ")} files are accepted`);
+      return false;
+    }
+    setError(null);
+    return true;
+  };
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -24,8 +38,9 @@ export function LandingView({ onFileSelect }: LandingViewProps) {
   const handleFileInput = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      setError(null);
-      onFileSelect(files[0]);
+      if (validateFile(files[0])) {
+        onFileSelect(files[0]);
+      }
     }
   };
 
@@ -71,8 +86,9 @@ export function LandingView({ onFileSelect }: LandingViewProps) {
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      setError(null);
-      onFileSelect(files[0]);
+      if (validateFile(files[0])) {
+        onFileSelect(files[0]);
+      }
     }
   };
 
@@ -123,6 +139,7 @@ export function LandingView({ onFileSelect }: LandingViewProps) {
           )}
         >
           <svg
+            aria-hidden="true"
             width="32"
             height="32"
             viewBox="0 0 24 24"
@@ -170,6 +187,7 @@ export function LandingView({ onFileSelect }: LandingViewProps) {
         <div className="fixed inset-0 z-50 bg-sapphire-950/80 backdrop-blur-sm flex items-center justify-center">
           <div className="border-2 border-dashed border-sapphire-500/50 rounded-2xl m-6 flex-1 h-[calc(100%-48px)] flex flex-col items-center justify-center gap-4">
             <svg
+              aria-hidden="true"
               width="48"
               height="48"
               viewBox="0 0 24 24"

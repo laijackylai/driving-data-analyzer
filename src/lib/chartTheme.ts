@@ -29,7 +29,7 @@ export const BASE_LAYOUT: Partial<Layout> = {
   paper_bgcolor: CHART_COLORS.background,
   plot_bgcolor: CHART_COLORS.background,
   font: {
-    family: "var(--font-dm-sans), system-ui, sans-serif",
+    family: "var(--font-geist-sans), system-ui, sans-serif",
     color: CHART_COLORS.text,
     size: 11,
   },
@@ -48,7 +48,7 @@ export const BASE_LAYOUT: Partial<Layout> = {
     bgcolor: "rgba(15, 34, 64, 0.95)",
     bordercolor: "rgba(54, 112, 198, 0.3)",
     font: {
-      family: "var(--font-dm-sans), system-ui, sans-serif",
+      family: "var(--font-geist-sans), system-ui, sans-serif",
       color: CHART_COLORS.text,
       size: 12,
     },
