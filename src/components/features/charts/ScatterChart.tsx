@@ -101,6 +101,7 @@ export function ScatterChart({
       x: inRange.map((p) => p.x),
       y: inRange.map((p) => p.y),
       customdata: inRange.map((p) => [p.ts]),
+      hovertemplate: `${xLabel ?? String(xField)}: %{x:.2f}<br>${yLabel ?? String(yField)}: %{y:.2f}<extra></extra>`,
       type: "scatter" as const,
       mode: "markers",
       name: yLabel ?? String(yField),
@@ -112,6 +113,7 @@ export function ScatterChart({
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
+    hovermode: "closest",
     height,
     xaxis: {
       ...BASE_LAYOUT.xaxis,
