@@ -29,7 +29,7 @@ export function TimeSeriesChart({
   const [forceRender, setForceRender] = useState(false);
 
   const plotTraces = useMemo(() => {
-    const result: Plotly.Data[] = traces.map((trace, index) => {
+    const result: Plotly.Data[] = traces.map((trace) => {
       // Filter to rows that have a defined value for this trace's field
       const defined = data.filter((d) => typeof d[trace.field] === "number");
 
@@ -54,9 +54,7 @@ export function TimeSeriesChart({
         x: xs,
         y: ys,
         customdata: source.map((d) => [formatTimestamp(d.timestamp, startTime)]),
-        hovertemplate: index === 0
-          ? `⏱ %{customdata[0]}<br>%{fullData.name}: %{y:.2f}<extra></extra>`
-          : `%{fullData.name}: %{y:.2f}<extra></extra>`,
+        hovertemplate: `⏱ %{customdata[0]}<br>%{fullData.name}: %{y:.2f}<extra></extra>`,
         type: "scatter" as const,
         mode: trace.mode ?? "lines",
         name: trace.name,
@@ -119,13 +117,13 @@ export function TimeSeriesChart({
 
     const l: Partial<Plotly.Layout> = {
       ...BASE_LAYOUT,
+      hovermode: "x",
       height,
       shapes: shapes as Plotly.Layout["shapes"],
       xaxis: {
         ...BASE_LAYOUT.xaxis,
         type: "linear",
         title: { text: "Time (m:ss)", font: { size: 10, color: CHART_COLORS.textMuted } },
-        hoverformat: "",
         range: xAxisRange,
         tickvals,
         ticktext,
