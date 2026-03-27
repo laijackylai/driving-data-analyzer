@@ -162,26 +162,41 @@ function DashboardContent({
       {/* ── All sections ── */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 pb-6">
 
-        {/* #summary — CategoryPanel grid */}
+        {/* #summary — CategoryPanel grid (OBD2) or COBB metadata header */}
         <section id="summary" className={SCROLL_MARGIN}>
           <div className="py-5 sm:py-6">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
-              Category Summary
-            </h2>
-            <div className="space-y-3">
-              {SUMMARY_CATEGORIES.map((cat) => {
-                const resultKey = RESULT_KEY_MAP[cat];
-                /* istanbul ignore next — all SUMMARY_CATEGORIES have RESULT_KEY_MAP entries */
-                if (!resultKey) return null;
-                return (
-                  <CategoryPanel
-                    key={cat}
-                    category={cat}
-                    metrics={result[resultKey] as CategoryMetricsType}
-                  />
-                );
-              })}
-            </div>
+            {dataSource === "cobb" ? (
+              <>
+                <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
+                  COBB Accessport
+                </h2>
+                {cobbMetadata?.vehicle && (
+                  <p className="text-sm font-mono text-sapphire-300">
+                    {cobbMetadata.vehicle}{cobbMetadata.tune ? ` · ${cobbMetadata.tune}` : ""}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
+                  Category Summary
+                </h2>
+                <div className="space-y-3">
+                  {SUMMARY_CATEGORIES.map((cat) => {
+                    const resultKey = RESULT_KEY_MAP[cat];
+                    /* istanbul ignore next — all SUMMARY_CATEGORIES have RESULT_KEY_MAP entries */
+                    if (!resultKey) return null;
+                    return (
+                      <CategoryPanel
+                        key={cat}
+                        category={cat}
+                        metrics={result[resultKey] as CategoryMetricsType}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </section>
 
