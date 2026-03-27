@@ -27,11 +27,13 @@ export function BarChart({ data, yLabel, height = 300 }: BarChartProps) {
       },
       text: data.map((d) => d.count !== undefined ? `n=${d.count}` : ""),
       textposition: "outside" as const,
+      hovertemplate: `%{x}<br>${yLabel ?? "Value"}: %{y:.2f}<extra></extra>`,
     },
   ], [data, yLabel]);
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
+    hovermode: "closest",
     height,
     xaxis: { ...BASE_LAYOUT.xaxis },
     yaxis: {
