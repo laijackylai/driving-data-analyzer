@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Outfit, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono, Doto } from "next/font/google";
+import { GeistSans } from "geist/font/sans";
 import "./globals.css";
 
 const outfit = Outfit({
@@ -9,18 +10,18 @@ const outfit = Outfit({
   weight: ["400", "500", "600", "700"],
 });
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-dm-sans",
-  display: "swap",
-  weight: ["400", "500", "600"],
-});
-
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
   display: "swap",
   weight: ["400", "500", "600"],
+});
+
+const doto = Doto({
+  subsets: ["latin"],
+  variable: "--font-doto",
+  display: "swap",
+  weight: ["600"],
 });
 
 export const metadata: Metadata = {
@@ -49,7 +50,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${outfit.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}
+      className={`${outfit.variable} ${GeistSans.variable} ${jetbrainsMono.variable} ${doto.variable}`}
     >
       <body className="antialiased bg-sapphire-950 text-sapphire-100 font-body min-h-screen safe-area-pad">
         <div className="pearl-overlay" aria-hidden="true" />

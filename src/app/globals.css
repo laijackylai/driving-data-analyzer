@@ -7,6 +7,8 @@
 /* ──────────────────────────────────────────────
    OBD2 Dashboard — Design Foundation
    Aesthetic: Premium automotive instrument cluster
+   Fonts: Geist Sans (body), Outfit (headings),
+          Doto (brand), JetBrains Mono (code)
    ────────────────────────────────────────────── */
 
 :root {
@@ -55,7 +57,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Prevent pull-to-refresh interference on mobile */
@@ -310,4 +312,9 @@ body {
 @keyframes slide-down-sheet {
   0% { transform: translateY(0); }
   100% { transform: translateY(100%); }
+}
+
+@keyframes pixel-appear {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
