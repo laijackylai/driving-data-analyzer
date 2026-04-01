@@ -101,6 +101,7 @@ export function ScatterChart({
       x: inRange.map((p) => p.x),
       y: inRange.map((p) => p.y),
       customdata: inRange.map((p) => [p.ts]),
+      hovertemplate: `${xLabel ?? String(xField)}: %{x:.2f}<br>${yLabel ?? String(yField)}: %{y:.2f}<extra></extra>`,
       type: "scatter" as const,
       mode: "markers",
       name: yLabel ?? String(yField),
@@ -108,10 +109,11 @@ export function ScatterChart({
     });
 
     return traces;
-  }, [data, xField, yField, colorField, timeRange, yLabel]);
+  }, [data, xField, yField, colorField, timeRange, xLabel, yLabel]);
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
+    hovermode: "closest",
     height,
     xaxis: {
       ...BASE_LAYOUT.xaxis,
@@ -128,7 +130,9 @@ export function ScatterChart({
     return data.filter((d) => d[xField] !== undefined && d[yField] !== undefined).length;
   }, [data, xField, yField]);
 
-  if (!forceRender && (data.length === 0 || validCount / data.length < INSUFFICIENT_DATA_THRESHOLD)) {
+  if (validCount === 0) return <div data-chart-empty className="hidden" />;
+
+  if (!forceRender && validCount / data.length < INSUFFICIENT_DATA_THRESHOLD) {
     return <InsufficientData available={validCount} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
   }
 

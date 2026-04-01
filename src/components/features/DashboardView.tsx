@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { CategoryPanel } from "@/components/features/CategoryPanel";
 import { Card, CardContent } from "@/components/ui/Card";
-import { SafetyGauge } from "@/components/ui/SafetyGauge";
 import {
   CategoryIcon,
   CATEGORY_LABELS,
@@ -19,6 +18,9 @@ import {
   ExtendedAnalysisResponse,
   CategoryMetricsType,
   ViewState,
+  DataSource,
+  CobbAnalysisResult,
+  CobbMetadata,
 } from "@/types";
 import { formatDuration } from "@/lib/utils";
 import { useCountUp } from "@/hooks/useCountUp";
@@ -27,7 +29,7 @@ import { useActiveSection } from "@/hooks/useActiveSection";
 import { TimelineSlider } from "@/components/features/TimelineSlider";
 import { LandingView } from "@/components/features/LandingView";
 import { DotLoader } from "@/components/features/DotLoader";
-import { PixelTransition } from "@/components/features/PixelTransition";
+import { PixelizeEffect } from "@/components/features/PixelizeEffect";
 
 // Tab components
 import { OverviewTab } from "@/components/features/tabs/OverviewTab";
@@ -40,6 +42,12 @@ import { ABSTab } from "@/components/features/tabs/ABSTab";
 import { AWDTab } from "@/components/features/tabs/AWDTab";
 import { ElectricalTab } from "@/components/features/tabs/ElectricalTab";
 import { AirIntakeTab } from "@/components/features/tabs/AirIntakeTab";
+import { CobbBoostTab } from "@/components/features/tabs/CobbBoostTab";
+import { CobbKnockTab } from "@/components/features/tabs/CobbKnockTab";
+import { CobbAFRTab } from "@/components/features/tabs/CobbAFRTab";
+import { CobbWastegateTab } from "@/components/features/tabs/CobbWastegateTab";
+import { CobbInjectorTab } from "@/components/features/tabs/CobbInjectorTab";
+import { CobbAVCSTab } from "@/components/features/tabs/CobbAVCSTab";
 
 // RESULT_KEY_MAP maps category keys to OBD2AnalysisResult keys for CategoryPanel
 const RESULT_KEY_MAP: Partial<Record<(typeof CATEGORY_ORDER)[number], keyof OBD2AnalysisResult>> = {
@@ -56,11 +64,19 @@ const RESULT_KEY_MAP: Partial<Record<(typeof CATEGORY_ORDER)[number], keyof OBD2
 // Categories that appear in the summary grid (have CategoryPanel data)
 const SUMMARY_CATEGORIES = ["engine", "fuel", "transmission", "power", "abs", "awd", "electrical", "airIntake"] as const;
 
-// Section IDs in scroll order — matches CATEGORY_ORDER
-const SECTION_IDS = CATEGORY_ORDER as readonly string[];
-
 // scroll-margin-top to account for sticky tab bar (~52px)
 const SCROLL_MARGIN = "scroll-mt-14";
+
+// Categories that only appear in OBD2 mode (hidden for COBB files)
+const OBD2_ONLY_CATS = new Set([
+  "engine", "fuel", "transmission", "power", "drivingBehavior",
+  "abs", "awd", "electrical", "airIntake",
+]);
+
+// Categories that only appear in COBB mode (hidden for OBD2 files)
+const COBB_ONLY_CATS = new Set([
+  "cobbBoost", "cobbKnock", "cobbAFR", "cobbWastegate", "cobbInjector", "cobbAVCS",
+]);
 
 function DashboardContent({
   result,
@@ -69,6 +85,9 @@ function DashboardContent({
   derived,
   thresholds,
   onHomeClick,
+  dataSource,
+  cobbResult,
+  cobbMetadata,
 }: {
   result: OBD2AnalysisResult;
   timeSeries: OBD2DataPoint[];
@@ -76,9 +95,16 @@ function DashboardContent({
   derived: DerivedMetrics;
   thresholds: ThresholdConfig;
   onHomeClick: () => void;
+  dataSource: DataSource;
+  cobbResult: CobbAnalysisResult | null;
+  cobbMetadata: CobbMetadata | null;
 }) {
-  const { activeSection, scrollToSection } = useActiveSection(SECTION_IDS);
   const hasChartData = timeSeries.length > 0;
+
+  const visibleCategories = CATEGORY_ORDER.filter((cat) =>
+    dataSource === "cobb" ? !OBD2_ONLY_CATS.has(cat) : !COBB_ONLY_CATS.has(cat)
+  );
+  const { activeSection, scrollToSection } = useActiveSection(visibleCategories as readonly string[]);
 
   return (
     <>
@@ -100,7 +126,7 @@ function DashboardContent({
               className="flex gap-1 overflow-x-auto px-1 py-2 scrollbar-none"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
-              {CATEGORY_ORDER.map((cat) => {
+              {visibleCategories.map((cat) => {
                 const isActive = activeSection === cat;
                 return (
                   <button
@@ -110,7 +136,7 @@ function DashboardContent({
                     onClick={() => scrollToSection(cat)}
                     className={[
                       "relative whitespace-nowrap min-h-[40px] px-3 py-2 rounded-lg",
-                      "text-sm font-medium font-body",
+                      "text-base font-black font-brand",
                       "transition-all duration-200 ease-out",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sapphire-500/50",
                       "flex items-center gap-1.5 shrink-0",
@@ -133,26 +159,41 @@ function DashboardContent({
       {/* ── All sections ── */}
       <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 pb-6">
 
-        {/* #summary — CategoryPanel grid */}
+        {/* #summary — CategoryPanel grid (OBD2) or COBB metadata header */}
         <section id="summary" className={SCROLL_MARGIN}>
           <div className="py-5 sm:py-6">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
-              Category Summary
-            </h2>
-            <div className="space-y-3">
-              {SUMMARY_CATEGORIES.map((cat) => {
-                const resultKey = RESULT_KEY_MAP[cat];
-                /* istanbul ignore next — all SUMMARY_CATEGORIES have RESULT_KEY_MAP entries */
-                if (!resultKey) return null;
-                return (
-                  <CategoryPanel
-                    key={cat}
-                    category={cat}
-                    metrics={result[resultKey] as CategoryMetricsType}
-                  />
-                );
-              })}
-            </div>
+            {dataSource === "cobb" ? (
+              <>
+                <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
+                  COBB Accessport
+                </h2>
+                {cobbMetadata?.vehicle && (
+                  <p className="text-sm font-mono text-sapphire-300">
+                    {cobbMetadata.vehicle}{cobbMetadata.tune ? ` · ${cobbMetadata.tune}` : ""}
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
+                  Category Summary
+                </h2>
+                <div className="space-y-3">
+                  {SUMMARY_CATEGORIES.map((cat) => {
+                    const resultKey = RESULT_KEY_MAP[cat];
+                    /* istanbul ignore next — all SUMMARY_CATEGORIES have RESULT_KEY_MAP entries */
+                    if (!resultKey) return null;
+                    return (
+                      <CategoryPanel
+                        key={cat}
+                        category={cat}
+                        metrics={result[resultKey] as CategoryMetricsType}
+                      />
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -163,56 +204,108 @@ function DashboardContent({
           )}
         </section>
 
-        {/* #engine */}
-        <section id="engine" className={SCROLL_MARGIN}>
-          {hasChartData && (
-            <EngineTab timeSeries={timeSeries} thresholds={thresholds} />
-          )}
-        </section>
+        {/* OBD2-only sections — not rendered for COBB files */}
+        {dataSource !== "cobb" && (
+          <>
+            {/* #engine */}
+            <section id="engine" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <EngineTab timeSeries={timeSeries} thresholds={thresholds} />
+              )}
+            </section>
 
-        {/* #fuel */}
-        <section id="fuel" className={SCROLL_MARGIN}>
-          {hasChartData && (
-            <FuelTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
-          )}
-        </section>
+            {/* #fuel */}
+            <section id="fuel" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <FuelTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
+              )}
+            </section>
 
-        {/* #transmission */}
-        <section id="transmission" className={SCROLL_MARGIN}>
-          {hasChartData && (
-            <TransmissionTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
-          )}
-        </section>
+            {/* #transmission */}
+            <section id="transmission" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <TransmissionTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
+              )}
+            </section>
 
-        {/* #power */}
-        <section id="power" className={SCROLL_MARGIN}>
-          {hasChartData && <PowerTab timeSeries={timeSeries} />}
-        </section>
+            {/* #power */}
+            <section id="power" className={SCROLL_MARGIN}>
+              {hasChartData && <PowerTab timeSeries={timeSeries} />}
+            </section>
 
-        {/* #drivingBehavior */}
-        <section id="drivingBehavior" className={SCROLL_MARGIN}>
-          {hasChartData && <DrivingBehaviorTab timeSeries={timeSeries} />}
-        </section>
+            {/* #drivingBehavior */}
+            <section id="drivingBehavior" className={SCROLL_MARGIN}>
+              {hasChartData && <DrivingBehaviorTab timeSeries={timeSeries} />}
+            </section>
 
-        {/* #abs */}
-        <section id="abs" className={SCROLL_MARGIN}>
-          {hasChartData && <ABSTab timeSeries={timeSeries} derived={derived} />}
-        </section>
+            {/* #abs */}
+            <section id="abs" className={SCROLL_MARGIN}>
+              {hasChartData && <ABSTab timeSeries={timeSeries} derived={derived} />}
+            </section>
 
-        {/* #awd */}
-        <section id="awd" className={SCROLL_MARGIN}>
-          {hasChartData && <AWDTab timeSeries={timeSeries} />}
-        </section>
+            {/* #awd */}
+            <section id="awd" className={SCROLL_MARGIN}>
+              {hasChartData && <AWDTab timeSeries={timeSeries} />}
+            </section>
 
-        {/* #electrical */}
-        <section id="electrical" className={SCROLL_MARGIN}>
-          {hasChartData && <ElectricalTab timeSeries={timeSeries} thresholds={thresholds} />}
-        </section>
+            {/* #electrical */}
+            <section id="electrical" className={SCROLL_MARGIN}>
+              {hasChartData && <ElectricalTab timeSeries={timeSeries} thresholds={thresholds} />}
+            </section>
 
-        {/* #airIntake */}
-        <section id="airIntake" className={SCROLL_MARGIN}>
-          {hasChartData && <AirIntakeTab timeSeries={timeSeries} thresholds={thresholds} />}
-        </section>
+            {/* #airIntake */}
+            <section id="airIntake" className={SCROLL_MARGIN}>
+              {hasChartData && <AirIntakeTab timeSeries={timeSeries} thresholds={thresholds} />}
+            </section>
+          </>
+        )}
+
+        {/* COBB-only sections — not rendered for OBD2 files */}
+        {dataSource === "cobb" && cobbResult && (
+          <>
+            {/* #cobbBoost */}
+            <section id="cobbBoost" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbBoostTab timeSeries={timeSeries} stats={cobbResult.boost} />
+              )}
+            </section>
+
+            {/* #cobbKnock */}
+            <section id="cobbKnock" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbKnockTab timeSeries={timeSeries} stats={cobbResult.knock} />
+              )}
+            </section>
+
+            {/* #cobbAFR */}
+            <section id="cobbAFR" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbAFRTab timeSeries={timeSeries} stats={cobbResult.afr} />
+              )}
+            </section>
+
+            {/* #cobbWastegate */}
+            <section id="cobbWastegate" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbWastegateTab timeSeries={timeSeries} stats={cobbResult.wastegate} />
+              )}
+            </section>
+
+            {/* #cobbInjector */}
+            <section id="cobbInjector" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbInjectorTab timeSeries={timeSeries} stats={cobbResult.injector} />
+              )}
+            </section>
+
+            {/* #cobbAVCS */}
+            <section id="cobbAVCS" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbAVCSTab timeSeries={timeSeries} stats={cobbResult.avcs} />
+              )}
+            </section>
+          </>
+        )}
 
         {/* Session details — below last section, above timeline */}
         <div className="mt-6">
@@ -228,7 +321,10 @@ function DashboardContent({
 
 export function DashboardView() {
   const [viewState, setViewState] = useState<ViewState>("landing");
-  const pendingFileRef = useRef<File | null>(null);
+  const [showDotLoader, setShowDotLoader] = useState(true);
+  const [snapshotUrl, setSnapshotUrl] = useState<string>("/landing-snapshot.png");
+  const [dashboardSnapshotUrl, setDashboardSnapshotUrl] = useState<string | null>(null);
+  const dashboardCaptureRef = useRef<HTMLDivElement>(null);
 
   const [result, setResult] = useState<OBD2AnalysisResult | null>(null);
   const [timeSeries, setTimeSeries] = useState<OBD2DataPoint[]>([]);
@@ -236,6 +332,9 @@ export function DashboardView() {
   const [derived, setDerived] = useState<DerivedMetrics | null>(null);
   const [thresholds, setThresholds] = useState<ThresholdConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<DataSource>("obd2");
+  const [cobbResult, setCobbResult] = useState<CobbAnalysisResult | null>(null);
+  const [cobbMetadata, setCobbMetadata] = useState<CobbMetadata | null>(null);
 
   const analyzeFile = useCallback(async (file: File) => {
     setError(null);
@@ -256,44 +355,102 @@ export function DashboardView() {
         return;
       }
 
-      setResult(data.result);
+      const derivedData = data.derived ?? null;
+      const thresholdsData = data.thresholds ?? null;
+
+      setResult(data.result ?? null);
       setTimeSeries(data.timeSeries ?? []);
       setGps(data.gps ?? []);
-      setDerived(data.derived ?? null);
-      setThresholds(data.thresholds ?? null);
-      setViewState("dashboard");
+      setDerived(derivedData);
+      setThresholds(thresholdsData);
+      setDataSource(data.dataSource ?? "obd2");
+      setCobbResult(data.cobbResult ?? null);
+      setCobbMetadata(data.cobbMetadata ?? null);
+
+      if (!derivedData || !thresholdsData) {
+        setError("Analysis failed");
+        setViewState("landing");
+        return;
+      }
+      // Stay in "analyzing" — the capture useEffect will trigger phase "out" automatically
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
       setViewState("landing");
     }
   }, []); // empty deps — all deps are stable state setters from useState
 
-  const handleFileSelect = (file: File) => {
-    pendingFileRef.current = file;
-    setViewState("dissolving");
-  };
-
-  const handleDissolveComplete = useCallback(() => {
-    /* istanbul ignore next — defensive guard; pendingFileRef is always set before dissolving */
-    if (!pendingFileRef.current) {
-      setViewState("landing");
-      return;
+  // Capture live DOM snapshot of the landing view before transitioning.
+  // html-to-image reads computed styles so it works at any viewport size.
+  // Falls back to the static /landing-snapshot.png if capture fails.
+  const capturingRef = useRef(false);
+  const handleFileSelect = useCallback(async (file: File) => {
+    if (!capturingRef.current) {
+      capturingRef.current = true;
+      try {
+        const { toPng } = await import("html-to-image");
+        const dataUrl = await toPng(document.documentElement, {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          pixelRatio: 1,
+          skipAutoScale: true,
+          skipFonts: true,
+        });
+        setSnapshotUrl(dataUrl);
+      } catch {
+        // fallback: keep the static snapshot
+      }
+      capturingRef.current = false;
     }
     setViewState("analyzing");
-    analyzeFile(pendingFileRef.current);
+    analyzeFile(file);
   }, [analyzeFile]);
 
+  const handleBeforeDashboardReveal = useCallback(() => {
+    setShowDotLoader(false);
+  }, []);
+
+  const handleDashboardReveal = useCallback(() => {
+    setViewState("dashboard");
+  }, []);
+
   const handleHomeClick = useCallback(() => {
+    setShowDotLoader(true);
     setResult(null);
     setTimeSeries([]);
     setGps([]);
     setDerived(null);
     setThresholds(null);
     setError(null);
+    setDashboardSnapshotUrl(null);
     setViewState("landing");
   }, []);
 
   const hasAllData = result && derived && thresholds;
+
+  // When API returns (hasAllData becomes true while still in "analyzing"),
+  // capture the dashboard div rendered behind the PixelizeEffect canvas,
+  // then hand it to PixelizeEffect as targetSnapshotUrl to trigger coarse→fine.
+  useEffect(() => {
+    if (viewState !== "analyzing" || !hasAllData || dashboardSnapshotUrl !== null) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      try {
+        const { toPng } = await import("html-to-image");
+        const el = dashboardCaptureRef.current ?? document.documentElement;
+        const url = await toPng(el, {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          pixelRatio: 1,
+          skipAutoScale: true,
+          skipFonts: true,
+        });
+        if (active) setDashboardSnapshotUrl(url);
+      } catch {
+        if (active) setDashboardSnapshotUrl(snapshotUrl); // fallback
+      }
+    }, 50);
+    return () => { active = false; clearTimeout(timer); };
+  }, [viewState, hasAllData, dashboardSnapshotUrl, snapshotUrl]);
 
   return (
     <TimeRangeProvider>
@@ -302,23 +459,31 @@ export function DashboardView() {
           <LandingView onFileSelect={handleFileSelect} />
         )}
 
-        {viewState === "dissolving" && (
-          <PixelTransition active={true} onComplete={handleDissolveComplete}>
-            <LandingView onFileSelect={handleFileSelect} />
-          </PixelTransition>
-        )}
-
         {viewState === "analyzing" && (
-          <div className="h-screen flex items-center justify-center">
-            <DotLoader />
-          </div>
+          <>
+            {/* Canvas: fine→coarse on landing snapshot, then coarse→fine on dashboard snapshot */}
+            <PixelizeEffect
+              snapshotUrl={snapshotUrl}
+              targetSnapshotUrl={dashboardSnapshotUrl}
+              onBeforeComplete={handleBeforeDashboardReveal}
+              onComplete={handleDashboardReveal}
+            />
+            {/* DotLoader hides 50ms before phase-out completes */}
+            {showDotLoader && (
+              <div className="fixed inset-0 z-[300] flex items-center justify-center pointer-events-none">
+                <DotLoader />
+              </div>
+            )}
+          </>
         )}
 
-        {viewState === "dashboard" && hasAllData && (
-          <>
+        {/* Dashboard content:
+            - "analyzing + hasAllData": rendered behind the PixelizeEffect canvas for capture
+            - "dashboard": fully visible */}
+        {((viewState === "analyzing" && !!hasAllData) || viewState === "dashboard") && result && derived && thresholds && (
+          <div ref={dashboardCaptureRef}>
             {/* ── Non-sticky header ── */}
             <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
-              {/* ── Trip summary header (scrolls away) ── */}
               <div className="space-y-5 sm:space-y-6">
                 <div
                   className="animate-fade-up opacity-0 flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-2 px-0.5"
@@ -350,12 +515,6 @@ export function DashboardView() {
                   />
                 </div>
 
-                <div
-                  className="animate-fade-up opacity-0 flex justify-center py-1 sm:py-2"
-                  style={{ animationDelay: "150ms" }}
-                >
-                  <SafetyGauge score={result.safetyScore} size={180} strokeWidth={12} />
-                </div>
               </div>
             </div>
 
@@ -367,8 +526,11 @@ export function DashboardView() {
               derived={derived}
               thresholds={thresholds}
               onHomeClick={handleHomeClick}
+              dataSource={dataSource}
+              cobbResult={cobbResult}
+              cobbMetadata={cobbMetadata}
             />
-          </>
+          </div>
         )}
 
         {/* Error toast — shown on landing after a failed analysis */}

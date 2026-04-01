@@ -41,6 +41,7 @@ export function HistogramChart({
       nbinsx: bins,
       name: xLabel ?? "Distribution",
       marker: { color: CHART_COLORS.primaryFill, line: { color: CHART_COLORS.primary, width: 1 } },
+      hovertemplate: `${xLabel ?? "Value"}: %{x}<br>Count: %{y}<extra></extra>`,
     },
   ], [data, bins, xLabel]);
 
@@ -60,6 +61,9 @@ export function HistogramChart({
 
     return {
       ...BASE_LAYOUT,
+      // Override BASE_LAYOUT "x unified" — histograms show bin ranges on hover,
+      // which don't work with unified x-axis mode (bins aren't aligned to a single x).
+      hovermode: "closest",
       height,
       shapes,
       xaxis: {
@@ -72,6 +76,8 @@ export function HistogramChart({
       },
     };
   }, [highlightRanges, height, xLabel]);
+
+  if (data.length === 0) return <div data-chart-empty className="hidden" />;
 
   if (data.length < 2 && !forceRender) {
     return <InsufficientData available={data.length} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;

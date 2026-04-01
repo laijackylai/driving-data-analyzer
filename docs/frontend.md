@@ -69,7 +69,7 @@
   ┌─────────────────────────────┐
   │  Header: Trip Summary Bar   │  ← Compact: duration, distance, date
   ├─────────────────────────────┤
-  │  Safety Score Gauge          │  ← Animated radial gauge, centered
+  │  Safety Score Gauge         │  ← Animated radial gauge, centered
   ├─────────────────────────────┤
   │  Category Tab Bar ←scroll→  │  ← Horizontal scroll on mobile
   ├─────────────────────────────┤

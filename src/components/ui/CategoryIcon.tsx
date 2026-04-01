@@ -171,6 +171,71 @@ export function CategoryIcon({
         </svg>
       );
 
+    case "cobbBoost":
+      // Pressure gauge
+      return (
+        <svg {...iconProps}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v2" />
+          <path d="M6.34 8.34l1.42 1.42" />
+          <path d="M4 14h2" />
+          <path d="M18 14h2" />
+          <path d="M16.24 8.34l-1.42 1.42" />
+          <path d="M12 12l3-3" />
+          <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+        </svg>
+      );
+
+    case "cobbKnock":
+      // Warning triangle
+      return (
+        <svg {...iconProps}>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+
+    case "cobbAFR":
+      // Dollar-sign path repurposed as balance/flow icon
+      return (
+        <svg {...iconProps}>
+          <line x1="12" y1="2" x2="12" y2="22" />
+          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+        </svg>
+      );
+
+    case "cobbWastegate":
+      // Circle with diagonal + clock hand (valve)
+      return (
+        <svg {...iconProps}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M4.93 4.93l14.14 14.14" />
+          <path d="M12 8v4l3 3" />
+        </svg>
+      );
+
+    case "cobbInjector":
+      // Droplet with spray lines
+      return (
+        <svg {...iconProps}>
+          <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+          <line x1="12" y1="22" x2="12" y2="18" />
+          <line x1="9" y1="19" x2="15" y2="19" />
+        </svg>
+      );
+
+    case "cobbAVCS":
+      // Camshaft lobes on a shaft
+      return (
+        <svg {...iconProps}>
+          <ellipse cx="12" cy="12" rx="10" ry="4" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <circle cx="7" cy="12" r="2" fill="currentColor" />
+          <circle cx="17" cy="12" r="2" fill="currentColor" />
+        </svg>
+      );
+
     default:
       // Fallback — generic data icon
       return (
@@ -196,6 +261,12 @@ export const CATEGORY_LABELS: Record<string, string> = {
   awd: "AWD",
   electrical: "Electrical",
   airIntake: "Air Intake",
+  cobbBoost: "Boost",
+  cobbKnock: "Knock",
+  cobbAFR: "AFR",
+  cobbWastegate: "Wastegate",
+  cobbInjector: "Injector",
+  cobbAVCS: "AVCS",
 };
 
 /**
@@ -213,6 +284,12 @@ export const CATEGORY_SHORT_LABELS: Record<string, string> = {
   awd: "AWD",
   electrical: "Elec",
   airIntake: "Air",
+  cobbBoost: "Boost",
+  cobbKnock: "Knock",
+  cobbAFR: "AFR",
+  cobbWastegate: "WG",
+  cobbInjector: "Inj",
+  cobbAVCS: "AVCS",
 };
 
 /**
@@ -230,4 +307,11 @@ export const CATEGORY_ORDER = [
   "awd",
   "electrical",
   "airIntake",
+  // COBB Accessport categories
+  "cobbBoost",
+  "cobbKnock",
+  "cobbAFR",
+  "cobbWastegate",
+  "cobbInjector",
+  "cobbAVCS",
 ] as const;

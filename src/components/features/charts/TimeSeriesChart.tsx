@@ -50,13 +50,19 @@ export function TimeSeriesChart({
         xs.push(d.timestamp - startTime);
         ys.push(d[trace.field] as number);
       }
+      const color = trace.color ?? CHART_COLORS.primary;
       return {
         x: xs,
         y: ys,
+        customdata: source.map((d) => [formatTimestamp(d.timestamp, startTime)]),
+        // Each trace shows time + name:value uniformly. hovermode "x" renders
+        // separate per-trace boxes; the time repeats in each box intentionally
+        // since there is no unified header with hovermode "x".
+        hovertemplate: `⏱ %{customdata[0]}<br><span style='color:${color}'>%{fullData.name}</span>: %{y:.2f}<extra></extra>`,
         type: "scatter" as const,
         mode: trace.mode ?? "lines",
         name: trace.name,
-        line: { color: trace.color ?? CHART_COLORS.primary, width: 1.5 },
+        line: { color, width: 1.5 },
         fill: (trace.fill ? "tozeroy" : undefined) as Plotly.PlotData["fill"],
         fillcolor: trace.fill ? (trace.color ?? CHART_COLORS.primaryFill) : undefined,
         yaxis: trace.yaxis ?? "y",
@@ -115,11 +121,13 @@ export function TimeSeriesChart({
 
     const l: Partial<Plotly.Layout> = {
       ...BASE_LAYOUT,
+      hovermode: "x",
       height,
       shapes: shapes as Plotly.Layout["shapes"],
       xaxis: {
         ...BASE_LAYOUT.xaxis,
         type: "linear",
+        hoverformat: "",
         title: { text: "Time (m:ss)", font: { size: 10, color: CHART_COLORS.textMuted } },
         range: xAxisRange,
         tickvals,
@@ -153,6 +161,12 @@ export function TimeSeriesChart({
       return defined.length / data.length >= INSUFFICIENT_DATA_THRESHOLD;
     });
   }, [data, traces]);
+
+  const totalDefined = useMemo(() =>
+    traces.reduce((sum, trace) => sum + data.filter((d) => typeof d[trace.field] === "number").length, 0),
+    [data, traces]);
+
+  if (totalDefined === 0) return <div data-chart-empty className="hidden" />;
 
   if (!hasEnoughData && !forceRender) {
     const best = traces.reduce((max, trace) => {

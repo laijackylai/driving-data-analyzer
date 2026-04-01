@@ -56,7 +56,7 @@ const config: Config = {
       },
       fontFamily: {
         brand: ["var(--font-doto)", "monospace"],
-        display: ["var(--font-outfit)", "system-ui", "sans-serif"],
+        display: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         body: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-jetbrains)", "monospace"],
       },

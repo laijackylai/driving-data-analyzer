@@ -54,26 +54,35 @@ export function ChartWrapper({
     const container = containerRef.current;
     if (!container) return;
 
-    const isReady = () =>
-      !!container.querySelector(".js-plotly-plot, .leaflet-container, [data-insufficient]");
+    const CHART_SELECTORS = ".js-plotly-plot, .leaflet-container, [data-insufficient], [data-chart-empty]";
 
-    if (isReady()) {
-      setChartReady(true);
-      return;
-    }
+    const checkReady = () => {
+      if (!container.querySelector(CHART_SELECTORS)) return false;
+      // Check empty synchronously to avoid a one-frame flash where the
+      // skeleton disappears but the wrapper hasn't been removed yet.
+      if (container.querySelector("[data-chart-empty]")) {
+        setIsEmpty(true);
+      } else {
+        setChartReady(true);
+      }
+      return true;
+    };
+
+    if (checkReady()) return;
 
     const observer = new MutationObserver(() => {
-      if (isReady()) {
-        setChartReady(true);
-        observer.disconnect();
-      }
+      if (checkReady()) observer.disconnect();
     });
     observer.observe(container, { childList: true, subtree: true });
 
     return () => observer.disconnect();
   }, [hasEntered]);
 
+  const [isEmpty, setIsEmpty] = useState(false);
+
   const showSkeleton = loading || !hasEntered || !chartReady;
+
+  if (isEmpty) return null;
 
   return (
     <div

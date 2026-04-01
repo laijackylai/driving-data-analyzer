@@ -111,7 +111,7 @@ export function LandingView({ onFileSelect }: LandingViewProps) {
 
       {/* Top bar */}
       <div className="flex items-center justify-between">
-        <span className="font-brand text-xl sm:text-2xl font-semibold text-sapphire-100 tracking-tight">
+        <span className="font-brand text-3xl sm:text-4xl font-black text-sapphire-100 tracking-tight">
           OBD2Charts
         </span>
         <div

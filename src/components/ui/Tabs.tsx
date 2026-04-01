@@ -201,7 +201,7 @@ const TabsTrigger = forwardRef<HTMLButtonElement, TabsTriggerProps>(
         className={cn(
           // Base — 44px min touch target for mobile
           "relative whitespace-nowrap min-h-[44px] px-4 py-2.5 rounded-lg",
-          "text-sm font-medium font-body",
+          "text-sm font-black font-brand",
           "transition-all duration-200 ease-out",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sapphire-500/50",
           "flex items-center gap-2",

@@ -241,4 +241,118 @@ export const METRIC_TOOLTIPS: Record<string, MetricTooltipContent> = {
     ],
     interpretation: "Voltage dropping under electrical load suggests a weak alternator; sagging at idle but recovering at RPM points to belt tension.",
   },
+
+  // COBB metrics
+  cobbBoost: {
+    axis: "Y-axis shows boost pressure in psi — actual (primary) vs ECU target (secondary).",
+    values: [
+      "Stock FA20DIT targets ~14–18 psi peak; OTS tunes typically 18–22 psi depending on fuel grade.",
+      "Actual consistently below target indicates boost leak, wastegate sticking open, or worn turbo.",
+    ],
+    interpretation: "A persistent gap between actual and target on the same RPM range each pull suggests a hardware issue rather than a tune problem.",
+  },
+  cobbBoostError: {
+    axis: "Y-axis shows the difference between actual and target boost pressure in psi.",
+    values: [
+      "±1–2 psi transient error is normal during spool — the ECU is still ramping boost.",
+      "Sustained >3 psi negative error (underboost) means the turbo isn't hitting target; positive means overboost risk.",
+    ],
+    interpretation: "Large error spikes at peak RPM suggest the wastegate is slow to respond; check actuator linkage and solenoid duty cycle.",
+  },
+  cobbBoostScatter: {
+    axis: "X-axis = engine RPM; Y-axis = boost pressure (psi); color = throttle position.",
+    values: [
+      "Boost should rise steeply from ~2500 RPM and plateau through peak power range.",
+      "Color gradient should be tight red (high throttle) at peak boost — light colors mean partial throttle pulls.",
+    ],
+    interpretation: "Scattered points at high RPM with inconsistent boost indicate turbo surge or compressor instability — check inlet piping.",
+  },
+  cobbAFR: {
+    axis: "Y-axis shows air-fuel ratio — actual wideband reading vs closed-loop target.",
+    values: [
+      "Cruise: ~14.7:1 (stoich); light load: 14–15:1; wide-open throttle: 11.0–11.8:1 for FA20DIT.",
+      "Actual leaner than 12.0:1 at WOT is a danger zone — risk of detonation and piston damage.",
+    ],
+    interpretation: "Actual tracking target closely at WOT confirms the fueling strategy is correct; divergence at peak power RPM warrants immediate investigation.",
+  },
+  cobbAFCorrection: {
+    axis: "Y-axis shows AF Correction 1 (short-term) and AF Learning 1 (long-term) fuel trims as a percentage.",
+    values: [
+      "±5% is normal adaptive operation — the ECU is fine-tuning the base map.",
+      ">±8% means the base map has a systematic error the ECU is compensating for.",
+    ],
+    interpretation: "Large learning values after a flash suggest the OTS map isn't matched to your injectors or fuel — consider a custom tune.",
+  },
+  cobbAFRScatter: {
+    axis: "X-axis = RPM; Y-axis = actual AFR; color = throttle position.",
+    values: [
+      "WOT pulls (red) should cluster tightly around the target AFR across the RPM range.",
+      "Lean outliers at high RPM and high throttle are the highest-risk points — investigate immediately.",
+    ],
+    interpretation: "Loose scatter at WOT indicates inconsistent fueling — check for injector deposits, pump duty, or boost-fuel correlation issues.",
+  },
+  cobbFeedbackKnock: {
+    axis: "Y-axis shows real-time knock retard applied by the ECU in degrees.",
+    values: [
+      "0° is ideal. Occasional –1° to –2° on hard pulls with premium fuel is acceptable.",
+      "< –3° sustained means significant knock — check fuel octane, IAT, and boost levels.",
+    ],
+    interpretation: "Repeated knock at the same RPM point across multiple pulls is a tune issue; random single-pull knock often indicates fuel quality.",
+  },
+  cobbFineKnockLearn: {
+    axis: "Y-axis shows the ECU's learned timing correction stored in the knock learning table.",
+    values: [
+      "Values close to 0° mean the engine is happy on the current tune and fuel.",
+      "Negative values (–1° to –3°) mean the ECU has permanently pulled timing — the tune is too aggressive for current conditions.",
+    ],
+    interpretation: "Fine knock learn doesn't reset between drives — a degrading trend over time suggests heat soak, fuel degradation, or a developing knock source.",
+  },
+  cobbDAM: {
+    axis: "Y-axis shows the Dynamic Advance Multiplier — a 0–1 scalar the ECU uses to scale ignition timing.",
+    values: [
+      "1.0 is ideal — full timing as mapped. The ECU is confident no knock is occurring.",
+      "< 0.875 means the ECU has reduced timing system-wide due to repeated knock events.",
+    ],
+    interpretation: "DAM dropping below 1.0 and not recovering suggests persistent knock. Reset DAM only after resolving the root cause — fuel, tune, or hardware.",
+  },
+  cobbInjDutyCycle: {
+    axis: "Y-axis shows fuel injector duty cycle as a percentage (100% = injector open the entire cycle).",
+    values: [
+      "Port injectors: safe up to ~85%; direct injectors: safe up to ~90% on FA20DIT.",
+      ">85% duty cycle at peak power means the injectors are at or over capacity — fueling will go lean under demand.",
+    ],
+    interpretation: "Duty cycle plateauing while AFR goes lean confirms injectors are maxed out — upgrade injectors or reduce boost.",
+  },
+  cobbInjPulseWidth: {
+    axis: "Y-axis shows how long each injector stays open per cycle in milliseconds.",
+    values: [
+      "0.5–1.5 ms at idle; 4–8 ms at full load is typical for stock injectors.",
+      "Pulse width clamping while fuel demand increases means injectors are saturated.",
+    ],
+    interpretation: "Cross-reference with duty cycle — pulse width near the cycle duration combined with high duty confirms injector saturation.",
+  },
+  cobbInjScatter: {
+    axis: "X-axis = RPM; Y-axis = injector duty cycle (%); color = throttle position.",
+    values: [
+      "WOT points should show a smooth duty cycle rise from idle to redline.",
+      "Duty cycle plateauing at high RPM WOT while boost is still rising is a fueling bottleneck.",
+    ],
+    interpretation: "Wide scatter at identical RPM/throttle points suggests variable fuel pressure — check fuel pump health and fuel pressure regulator.",
+  },
+  cobbWastegate: {
+    axis: "Y-axis shows electronic wastegate position in mm — actual valve opening vs commanded target.",
+    values: [
+      "Actual should closely track commanded within 0.5–1 mm under steady-state conditions.",
+      "Persistent gap >2 mm means the actuator is slow or sticking — boost control will be imprecise.",
+    ],
+    interpretation: "Actual overshooting target during spool-up followed by hunting indicates PID tuning issues in the boost control system.",
+  },
+  cobbAVCS: {
+    axis: "Y-axis shows AVCS (Active Valve Control System) cam timing advance in degrees for intake and exhaust camshafts.",
+    values: [
+      "Intake advances aggressively (15–30°) at mid-range RPM for torque; exhaust is more conservative.",
+      "Cams not reaching target advance suggest a sticking VVT actuator or low oil pressure.",
+    ],
+    interpretation: "Intake and exhaust cam timing should move in coordinated patterns — erratic or flat traces indicate an AVCS solenoid or oil supply issue.",
+  },
 };

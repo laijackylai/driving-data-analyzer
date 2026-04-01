@@ -26,11 +26,15 @@ export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps
       name: yLabel ?? "Value",
       line: { color: CHART_COLORS.primary, width: 1.5 },
       fillcolor: CHART_COLORS.primaryFill,
+      hovertemplate: `${xLabel ?? "X"}: %{x:.2f}<br>${yLabel ?? "Y"}: %{y:.2f}<extra></extra>`,
     },
-  ], [data, yLabel]);
+  ], [data, xLabel, yLabel]);
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
+    // Override BASE_LAYOUT "x unified" — single-trace area charts need "closest"
+    // to avoid an empty unified header with only one series.
+    hovermode: "closest",
     height,
     xaxis: {
       ...BASE_LAYOUT.xaxis,
@@ -41,6 +45,8 @@ export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps
       title: yLabel ? { text: yLabel, font: { size: 10, color: CHART_COLORS.textMuted } } : undefined,
     },
   }), [height, xLabel, yLabel]);
+
+  if (data.length === 0) return <div data-chart-empty className="hidden" />;
 
   if (data.length < 2 && !forceRender) {
     return <InsufficientData available={data.length} total={data.length} height={height} onForceRender={() => setForceRender(true)} />;
