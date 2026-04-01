@@ -89,7 +89,7 @@ function DashboardContent({
   cobbResult,
   cobbMetadata,
 }: {
-  result: OBD2AnalysisResult;
+  result: OBD2AnalysisResult | null;
   timeSeries: OBD2DataPoint[];
   gps: GPSDataPoint[];
   derived: DerivedMetrics;
@@ -173,7 +173,7 @@ function DashboardContent({
                   </p>
                 )}
               </>
-            ) : (
+            ) : result ? (
               <>
                 <h2 className="text-xs font-medium uppercase tracking-widest text-sapphire-500 mb-4">
                   Category Summary
@@ -193,7 +193,7 @@ function DashboardContent({
                   })}
                 </div>
               </>
-            )}
+            ) : null}
           </div>
         </section>
 
@@ -308,9 +308,11 @@ function DashboardContent({
         )}
 
         {/* Session details — below last section, above timeline */}
-        <div className="mt-6">
-          <SessionDetailsCard result={result} />
-        </div>
+        {result && (
+          <div className="mt-6">
+            <SessionDetailsCard result={result} />
+          </div>
+        )}
       </div>
 
       {/* ── Timeline Slider (sticky bottom) ── */}
@@ -425,7 +427,7 @@ export function DashboardView() {
     setViewState("landing");
   }, []);
 
-  const hasAllData = result && derived && thresholds;
+  const hasAllData = (result || cobbResult) && derived && thresholds;
 
   // When API returns (hasAllData becomes true while still in "analyzing"),
   // capture the dashboard div rendered behind the PixelizeEffect canvas,
@@ -480,7 +482,7 @@ export function DashboardView() {
         {/* Dashboard content:
             - "analyzing + hasAllData": rendered behind the PixelizeEffect canvas for capture
             - "dashboard": fully visible */}
-        {((viewState === "analyzing" && !!hasAllData) || viewState === "dashboard") && result && derived && thresholds && (
+        {((viewState === "analyzing" && !!hasAllData) || viewState === "dashboard") && (result || cobbResult) && derived && thresholds && (
           <div ref={dashboardCaptureRef}>
             {/* ── Non-sticky header ── */}
             <div className="mx-auto w-full max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
@@ -489,30 +491,40 @@ export function DashboardView() {
                   className="animate-fade-up opacity-0 flex flex-wrap items-center gap-x-4 sm:gap-x-6 gap-y-2 px-0.5"
                   style={{ animationDelay: "0ms" }}
                 >
-                  <SummaryChip label="Duration" value={formatDuration(result.motion.durationSeconds)} />
-                  <SummaryChip
-                    label="Distance"
-                    value={
-                      result.motion.totalDistance !== null ? (
-                        <>
-                          <AnimatedNumber value={result.motion.totalDistance} decimals={1} delay={200} />{" "}
-                          km
-                        </>
-                      ) : "—"
-                    }
-                  />
-                  <SummaryChip
-                    label="Date"
-                    value={new Date(result.timestamp).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  />
-                  <SummaryChip
-                    label="Data pts"
-                    value={<AnimatedNumber value={result.dataPointCount} delay={400} />}
-                  />
+                  {result && (
+                    <>
+                      <SummaryChip label="Duration" value={formatDuration(result.motion.durationSeconds)} />
+                      <SummaryChip
+                        label="Distance"
+                        value={
+                          result.motion.totalDistance !== null ? (
+                            <>
+                              <AnimatedNumber value={result.motion.totalDistance} decimals={1} delay={200} />{" "}
+                              km
+                            </>
+                          ) : "—"
+                        }
+                      />
+                      <SummaryChip
+                        label="Date"
+                        value={new Date(result.timestamp).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      />
+                      <SummaryChip
+                        label="Data pts"
+                        value={<AnimatedNumber value={result.dataPointCount} delay={400} />}
+                      />
+                    </>
+                  )}
+                  {!result && timeSeries.length > 0 && (
+                    <SummaryChip
+                      label="Data pts"
+                      value={<AnimatedNumber value={timeSeries.length} delay={400} />}
+                    />
+                  )}
                 </div>
 
               </div>
