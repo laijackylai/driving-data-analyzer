@@ -59,7 +59,7 @@ export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
           data={timeSeries}
           xField="engineRpm"
           yField="afSens1Ratio"
-          colorField="throttlePosition"
+          colorField="accelPosition"
           xLabel="RPM"
           yLabel="AFR"
           height={280}

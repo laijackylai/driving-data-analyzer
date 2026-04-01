@@ -1,10 +1,4 @@
-import { DataSource } from "@/types";
-
-export interface SourceDetector {
-  source: DataSource;
-  priority: number;
-  detect(csvText: string): boolean;
-}
+import { DataSource, SourceDetector } from "@/types";
 
 const detectors: SourceDetector[] = [
   {

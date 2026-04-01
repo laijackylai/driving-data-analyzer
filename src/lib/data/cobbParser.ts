@@ -1,15 +1,10 @@
-import { OBD2DataPoint, CobbMetadata } from "@/types";
+import { OBD2DataPoint, CobbMetadata, CobbParseResult } from "@/types";
 import {
   COBB_COLUMN_MAP,
   COBB_AP_INFO_PATTERN,
   COBB_STRING_COLUMNS,
   COBB_STRING_COLUMN_FIELDS,
-} from "./cobbColumnMap";
-
-export interface CobbParseResult {
-  dataPoints: OBD2DataPoint[];
-  metadata: CobbMetadata;
-}
+} from "@/lib/data/cobbColumnMap";
 
 /**
  * Normalize a COBB CSV header: replace all non-ASCII characters with \ufffd.

@@ -32,6 +32,9 @@ export function AreaChart({ data, xLabel, yLabel, height = 300 }: AreaChartProps
 
   const layout = useMemo<Partial<Plotly.Layout>>(() => ({
     ...BASE_LAYOUT,
+    // Override BASE_LAYOUT "x unified" — single-trace area charts need "closest"
+    // to avoid an empty unified header with only one series.
+    hovermode: "closest",
     height,
     xaxis: {
       ...BASE_LAYOUT.xaxis,

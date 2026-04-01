@@ -1,12 +1,10 @@
+import { CobbColumnMapping } from "@/types";
+
 /**
  * Maps COBB Accessport CSV column header strings to OBD2DataPoint field names.
  * Optional `transform` converts the raw number value before storing.
  * Keys use \ufffd (replacement character) for degree symbols to match actual COBB CSV encoding.
  */
-export interface CobbColumnMapping {
-  field: string;
-  transform?: (value: number) => number;
-}
 
 const MPH_TO_KMH = (mph: number) => Math.round(mph * 1.60934 * 100) / 100;
 
@@ -19,7 +17,7 @@ export const COBB_COLUMN_MAP: Record<string, CobbColumnMapping> = {
   "AF Sens 1 Ratio (AFR)":            { field: "afSens1Ratio" },
   "AVCS Exh Left (\ufffd)":           { field: "avcsExhLeft" },
   "AVCS In Left (\ufffd)":            { field: "avcsInLeft" },
-  "Accel Position (%)":               { field: "throttlePosition" },
+  "Accel Position (%)":               { field: "accelPosition" },
   "Baro Pressure (psi)":              { field: "baroPressurePsi" },
   "Battery Volts (V)":                { field: "batteryVoltage" },
   "Boost (psi)":                      { field: "boostPsi" },

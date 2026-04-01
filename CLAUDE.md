@@ -24,10 +24,10 @@ src/
 │   ├── api/analyze/route.ts      # POST endpoint: CSV upload → OBD2AnalysisResult
 │   ├── dashboard/page.tsx        # Client-side dashboard ("use client")
 │   ├── page.tsx                  # Landing page
-│   ├── layout.tsx                # Root layout (Outfit, DM Sans, JetBrains Mono fonts)
+│   ├── layout.tsx                # Root layout (Geist Sans, JetBrains Mono fonts)
 │   └── globals.css               # Tailwind directives + glass-morphism + safe-area utilities
 ├── components/
-│   ├── ui/                       # Generic: Button, Card, Tabs, SafetyGauge, CategoryIcon
+│   ├── ui/                       # Generic: Button, Card, Tabs, CategoryIcon (SafetyGauge exists but not used in dashboard)
 │   └── features/                 # Feature: FileUpload, CategoryPanel, CategoryMetrics, MetricCard
 ├── lib/
 │   ├── utils.ts                  # cn(), formatFileSize(), formatDuration()

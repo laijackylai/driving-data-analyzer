@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GPSDataPoint } from "@/types";
 import { parseOBD2File } from "@/lib/data/obd2Parser";
 import { parseCobbFile } from "@/lib/data/cobbParser";
 import { analyzeOBD2Data } from "@/lib/data/obd2Analyzer";
@@ -50,27 +51,30 @@ export async function POST(request: NextRequest) {
     let dataPoints;
     let cobbResult;
     let cobbMetadata;
+    let derived;
+    let result;
+    let gpsData: GPSDataPoint[] = [];
 
     if (dataSource === "cobb") {
       const parsed = parseCobbFile(fileContent);
       dataPoints = parsed.dataPoints;
       cobbMetadata = parsed.metadata;
       cobbResult = analyzeCobbData(dataPoints);
+      derived = computeDerivedMetrics(dataPoints);
     } else {
       dataPoints = parseOBD2File(fileContent);
+      derived = computeDerivedMetrics(dataPoints);
+      result = analyzeOBD2Data(dataPoints);
+      // GPS data is only present in OBD2 CSV format (lat/lon columns)
+      gpsData = parseGPSData(fileContent);
     }
 
-    // GPS parsing is called for all sources. COBB files have no GPS columns
-    // so this returns an empty array — GPS panels will simply not render.
-    const gpsData = parseGPSData(fileContent);
-    const result = analyzeOBD2Data(dataPoints);
-    const derived = computeDerivedMetrics(dataPoints);
     const timeSeries = downsampleTimeSeries(dataPoints);
     const gps = downsampleGPS(gpsData);
 
     return NextResponse.json({
       success: true,
-      result,
+      ...(result && { result }),
       timeSeries,
       gps,
       derived,

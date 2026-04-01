@@ -130,14 +130,30 @@ export function analyzeCobbWastegate(points: OBD2DataPoint[]): CobbWastegateMetr
 export function analyzeCobbInjector(points: OBD2DataPoint[]): CobbInjectorMetrics {
   const duty = extractValues(points, "injDutyCycle");
   const pw = extractValues(points, "injPulseWidth");
-  const fuelCutEvents = points.filter((p) => typeof p.fuelCut === "number" && p.fuelCut > 0);
+
+  // Count fuel-cut EVENTS by counting leading edges (transitions into cut state).
+  // COBB logs at ~50Hz; a sustained fuel cut produces many consecutive non-zero rows.
+  // Counting raw samples would inflate the count by ~50x compared to actual events.
+  let fuelCutEventCount = 0;
+  let inFuelCutEvent = false;
+  for (const p of points) {
+    const v = p.fuelCut;
+    if (typeof v === "number" && v > 0) {
+      if (!inFuelCutEvent) {
+        fuelCutEventCount++;
+        inFuelCutEvent = true;
+      }
+    } else {
+      inFuelCutEvent = false;
+    }
+  }
 
   return {
     avgInjDutyCycle: avg(duty),
     maxInjDutyCycle: max(duty),
     avgInjPulseWidthMs: avg(pw),
     maxInjPulseWidthMs: max(pw),
-    fuelCutEventCount: fuelCutEvents.length,
+    fuelCutEventCount,
   };
 }
 

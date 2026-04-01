@@ -56,7 +56,7 @@ export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
           data={timeSeries}
           xField="engineRpm"
           yField="injDutyCycle"
-          colorField="throttlePosition"
+          colorField="accelPosition"
           xLabel="RPM"
           yLabel="Duty Cycle (%)"
           height={280}

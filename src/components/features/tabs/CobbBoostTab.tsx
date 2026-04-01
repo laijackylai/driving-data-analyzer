@@ -59,7 +59,7 @@ export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
           data={timeSeries}
           xField="engineRpm"
           yField="boostPsi"
-          colorField="throttlePosition"
+          colorField="accelPosition"
           xLabel="RPM"
           yLabel="Boost (psi)"
           height={280}

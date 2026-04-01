@@ -61,6 +61,9 @@ export function HistogramChart({
 
     return {
       ...BASE_LAYOUT,
+      // Override BASE_LAYOUT "x unified" — histograms show bin ranges on hover,
+      // which don't work with unified x-axis mode (bins aren't aligned to a single x).
+      hovermode: "closest",
       height,
       shapes,
       xaxis: {

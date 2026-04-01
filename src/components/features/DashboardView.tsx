@@ -361,7 +361,7 @@ export function DashboardView() {
       const derivedData = data.derived ?? null;
       const thresholdsData = data.thresholds ?? null;
 
-      setResult(data.result);
+      setResult(data.result ?? null);
       setTimeSeries(data.timeSeries ?? []);
       setGps(data.gps ?? []);
       setDerived(derivedData);

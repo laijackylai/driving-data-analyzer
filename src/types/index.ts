@@ -91,6 +91,7 @@ export interface OBD2DataPoint {
   batteryVoltage?: number;
 
   // COBB Accessport Parameters
+  accelPosition?: number;        // % (accelerator pedal position — "Accel Position (%)")
   acCompressorSw?: number;       // 1=on, 0=off
   afCorrection1?: number;        // %
   afCorrection3?: number;        // %
@@ -232,7 +233,7 @@ export interface CobbBoostMetrics {
 }
 
 export interface CobbKnockMetrics {
-  knockEventCount: number;        // samples where feedbackKnock < -0.5
+  knockEventCount: number;        // leading-edge transitions where feedbackKnock < -0.5
   avgFeedbackKnock: number | null;
   minFeedbackKnock: number | null; // most negative = worst knock
   avgFineKnockLearn: number | null;
@@ -345,6 +346,7 @@ export interface UploadedFile {
 
 // ── Data Source ──
 
+/** String-literal union — `type` is correct here (not an object, so interface doesn't apply). */
 export type DataSource = 'obd2' | 'cobb' | 'unknown';
 
 export interface CobbMetadata {
@@ -477,7 +479,7 @@ export interface MetricTooltipContent {
 
 export interface ExtendedAnalysisResponse {
   success: true;
-  result: OBD2AnalysisResult;
+  result?: OBD2AnalysisResult;
   timeSeries: OBD2DataPoint[];
   gps: GPSDataPoint[];
   derived: DerivedMetrics;
@@ -485,4 +487,33 @@ export interface ExtendedAnalysisResponse {
   dataSource?: DataSource;          // new, optional until Task 6 lands
   cobbResult?: CobbAnalysisResult;  // new, only when dataSource === 'cobb'
   cobbMetadata?: CobbMetadata;      // new, only when dataSource === 'cobb'
+}
+
+// ── Data Layer Interfaces ──
+
+/**
+ * Maps a COBB Accessport CSV column header to an OBD2DataPoint field name.
+ * Optional `transform` converts the raw number value before storing.
+ */
+export interface CobbColumnMapping {
+  field: string;
+  transform?: (value: number) => number;
+}
+
+/**
+ * Return type of parseCobbFile: parsed data points and extracted AP Info metadata.
+ */
+export interface CobbParseResult {
+  dataPoints: OBD2DataPoint[];
+  metadata: CobbMetadata;
+}
+
+/**
+ * A pluggable source detector for the source registry.
+ * Inspects raw CSV text and returns true if it recognises the format.
+ */
+export interface SourceDetector {
+  source: DataSource;
+  priority: number;
+  detect(csvText: string): boolean;
 }
