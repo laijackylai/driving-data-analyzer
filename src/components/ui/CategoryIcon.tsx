@@ -171,6 +171,26 @@ export function CategoryIcon({
         </svg>
       );
 
+    case "cobbEngine":
+      // Reuse engine icon (piston/crank)
+      return (
+        <svg {...iconProps}>
+          <rect x="7" y="2" width="10" height="14" rx="2" />
+          <line x1="9" y1="6" x2="15" y2="6" />
+          <line x1="9" y1="10" x2="15" y2="10" />
+          <line x1="12" y1="16" x2="12" y2="22" />
+          <circle cx="12" cy="20" r="2" />
+        </svg>
+      );
+
+    case "cobbPower":
+      // Reuse power icon (lightning bolt)
+      return (
+        <svg {...iconProps}>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+        </svg>
+      );
+
     case "cobbBoost":
       // Pressure gauge
       return (
@@ -261,9 +281,11 @@ export const CATEGORY_LABELS: Record<string, string> = {
   awd: "AWD",
   electrical: "Electrical",
   airIntake: "Air Intake",
+  cobbEngine: "Engine",
   cobbBoost: "Boost",
-  cobbKnock: "Knock",
   cobbAFR: "AFR",
+  cobbPower: "Power",
+  cobbKnock: "Knock",
   cobbWastegate: "Wastegate",
   cobbInjector: "Injector",
   cobbAVCS: "AVCS",
@@ -284,9 +306,11 @@ export const CATEGORY_SHORT_LABELS: Record<string, string> = {
   awd: "AWD",
   electrical: "Elec",
   airIntake: "Air",
+  cobbEngine: "Engine",
   cobbBoost: "Boost",
-  cobbKnock: "Knock",
   cobbAFR: "AFR",
+  cobbPower: "Power",
+  cobbKnock: "Knock",
   cobbWastegate: "WG",
   cobbInjector: "Inj",
   cobbAVCS: "AVCS",
@@ -308,9 +332,11 @@ export const CATEGORY_ORDER = [
   "electrical",
   "airIntake",
   // COBB Accessport categories
+  "cobbEngine",
   "cobbBoost",
-  "cobbKnock",
   "cobbAFR",
+  "cobbPower",
+  "cobbKnock",
   "cobbWastegate",
   "cobbInjector",
   "cobbAVCS",

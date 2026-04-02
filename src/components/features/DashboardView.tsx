@@ -48,6 +48,8 @@ import { CobbAFRTab } from "@/components/features/tabs/CobbAFRTab";
 import { CobbWastegateTab } from "@/components/features/tabs/CobbWastegateTab";
 import { CobbInjectorTab } from "@/components/features/tabs/CobbInjectorTab";
 import { CobbAVCSTab } from "@/components/features/tabs/CobbAVCSTab";
+import { CobbEngineTab } from "@/components/features/tabs/CobbEngineTab";
+import { CobbPowerTab } from "@/components/features/tabs/CobbPowerTab";
 
 // RESULT_KEY_MAP maps category keys to OBD2AnalysisResult keys for CategoryPanel
 const RESULT_KEY_MAP: Partial<Record<(typeof CATEGORY_ORDER)[number], keyof OBD2AnalysisResult>> = {
@@ -75,6 +77,7 @@ const OBD2_ONLY_CATS = new Set([
 
 // Categories that only appear in COBB mode (hidden for OBD2 files)
 const COBB_ONLY_CATS = new Set([
+  "cobbEngine", "cobbPower",
   "cobbBoost", "cobbKnock", "cobbAFR", "cobbWastegate", "cobbInjector", "cobbAVCS",
 ]);
 
@@ -210,14 +213,14 @@ function DashboardContent({
             {/* #engine */}
             <section id="engine" className={SCROLL_MARGIN}>
               {hasChartData && (
-                <EngineTab timeSeries={timeSeries} thresholds={thresholds} />
+                <EngineTab timeSeries={timeSeries} thresholds={thresholds} derived={derived} />
               )}
             </section>
 
             {/* #fuel */}
             <section id="fuel" className={SCROLL_MARGIN}>
               {hasChartData && (
-                <FuelTab timeSeries={timeSeries} derived={derived} thresholds={thresholds} />
+                <FuelTab timeSeries={timeSeries} thresholds={thresholds} />
               )}
             </section>
 
@@ -245,7 +248,7 @@ function DashboardContent({
 
             {/* #awd */}
             <section id="awd" className={SCROLL_MARGIN}>
-              {hasChartData && <AWDTab timeSeries={timeSeries} />}
+              {hasChartData && <AWDTab timeSeries={timeSeries} derived={derived} />}
             </section>
 
             {/* #electrical */}
@@ -263,6 +266,13 @@ function DashboardContent({
         {/* COBB-only sections — not rendered for OBD2 files */}
         {dataSource === "cobb" && cobbResult && (
           <>
+            {/* #cobbEngine */}
+            <section id="cobbEngine" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbEngineTab timeSeries={timeSeries} />
+              )}
+            </section>
+
             {/* #cobbBoost */}
             <section id="cobbBoost" className={SCROLL_MARGIN}>
               {hasChartData && (
@@ -270,17 +280,24 @@ function DashboardContent({
               )}
             </section>
 
-            {/* #cobbKnock */}
-            <section id="cobbKnock" className={SCROLL_MARGIN}>
-              {hasChartData && (
-                <CobbKnockTab timeSeries={timeSeries} stats={cobbResult.knock} />
-              )}
-            </section>
-
             {/* #cobbAFR */}
             <section id="cobbAFR" className={SCROLL_MARGIN}>
               {hasChartData && (
                 <CobbAFRTab timeSeries={timeSeries} stats={cobbResult.afr} />
+              )}
+            </section>
+
+            {/* #cobbPower */}
+            <section id="cobbPower" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbPowerTab timeSeries={timeSeries} />
+              )}
+            </section>
+
+            {/* #cobbKnock */}
+            <section id="cobbKnock" className={SCROLL_MARGIN}>
+              {hasChartData && (
+                <CobbKnockTab timeSeries={timeSeries} stats={cobbResult.knock} />
               )}
             </section>
 
