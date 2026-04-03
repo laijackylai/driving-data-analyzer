@@ -1,12 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
+import dynamic from "next/dynamic";
 import { OBD2DataPoint, CobbWastegateMetrics } from "@/types";
 import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
-import { CHART_COLORS } from "@/lib/chartTheme";
+import { ScatterChart } from "@/components/features/charts/ScatterChart";
+import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 interface CobbWastegateTabProps {
   timeSeries: OBD2DataPoint[];
@@ -15,6 +20,43 @@ interface CobbWastegateTabProps {
 
 export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
   const startTime = timeSeries[0]?.timestamp ?? 0;
+
+  // Wastegate error: actual - commanded
+  const wastegateErrorData = useMemo(() => {
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const colors: number[] = [];
+    for (const d of timeSeries) {
+      if (
+        typeof d.boostPsi !== "number" ||
+        typeof d.wastegateActualPosMm !== "number" ||
+        typeof d.wastegateCommFinalPosMm !== "number"
+      )
+        continue;
+      xs.push(d.boostPsi);
+      ys.push(d.wastegateActualPosMm - d.wastegateCommFinalPosMm);
+      colors.push(typeof d.engineRpm === "number" ? d.engineRpm : 0);
+    }
+    return { xs, ys, colors };
+  }, [timeSeries]);
+
+  // Boost overshoot: filter where actual > target
+  const overshootData = useMemo(() => {
+    const xs: number[] = [];
+    const ys: number[] = [];
+    for (const d of timeSeries) {
+      if (
+        typeof d.boostPsi !== "number" ||
+        typeof d.targetBoostFinalRelPsi !== "number" ||
+        typeof d.wastegateActualPosMm !== "number" ||
+        d.boostPsi <= d.targetBoostFinalRelPsi
+      )
+        continue;
+      xs.push(d.wastegateActualPosMm);
+      ys.push(d.boostPsi - d.targetBoostFinalRelPsi);
+    }
+    return { xs, ys };
+  }, [timeSeries]);
 
   return (
     <div className="space-y-4 pt-4">
@@ -25,17 +67,97 @@ export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
         <CobbStatCard label="Avg Error (actual−target)" value={stats.avgWastegateErrorMm} unit="mm" />
       </div>
 
-      <ChartWrapper title="Wastegate Position — Actual vs Target" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbWastegate} />}>
+      {/* Chart 1: Wastegate Positions + Boost */}
+      <ChartWrapper title="Wastegate Position & Boost" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbWastegate} />}>
         <TimeSeriesChart
           data={timeSeries}
           traces={[
             { field: "wastegateActualPosMm", name: "Actual (mm)", color: CHART_COLORS.primary },
-            { field: "wastegateCommFinalPosMm", name: "Target (mm)", color: CHART_COLORS.amber },
+            { field: "wastegateCommFinalPosMm", name: "Commanded (mm)", color: CHART_COLORS.amber },
+            { field: "boostPsi", name: "Boost (psi)", color: CHART_COLORS.quaternary, yaxis: "y2" },
           ]}
-          yAxisLabel="mm"
+          yAxisLabel="Position (mm)"
+          y2AxisLabel="Boost (psi)"
           height={280}
           startTime={startTime}
         />
+      </ChartWrapper>
+
+      {/* Chart 2: Wastegate Error vs Boost */}
+      <ChartWrapper title="Wastegate Error vs Boost" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbWastegateErrorVsBoost} />}>
+        {wastegateErrorData.xs.length > 0 ? (
+          <Plot
+            data={[
+              {
+                x: wastegateErrorData.xs,
+                y: wastegateErrorData.ys,
+                type: "scattergl" as const,
+                mode: "markers" as const,
+                marker: {
+                  color: wastegateErrorData.colors,
+                  colorscale: [[0, CHART_COLORS.primary], [1, CHART_COLORS.subaruRed]],
+                  size: 3,
+                  opacity: 0.6,
+                  colorbar: { title: { text: "RPM", font: { size: 10, color: CHART_COLORS.textMuted } }, tickfont: { size: 9, color: CHART_COLORS.textMuted } },
+                },
+                hovertemplate: "Boost: %{x:.1f} psi<br>WG Error: %{y:.1f} mm<br>RPM: %{marker.color:.0f}<extra></extra>",
+              },
+            ]}
+            layout={{
+              ...BASE_LAYOUT,
+              height: 280,
+              xaxis: { ...BASE_LAYOUT.xaxis, title: { text: "Boost (psi)", font: { size: 10, color: CHART_COLORS.textMuted } } },
+              yaxis: { ...BASE_LAYOUT.yaxis, title: { text: "WG Error (mm)", font: { size: 10, color: CHART_COLORS.textMuted } } },
+            }}
+            config={BASE_CONFIG as Plotly.Config}
+            style={{ width: "100%", height: "100%" }}
+            useResizeHandler
+          />
+        ) : (
+          <div data-chart-empty className="hidden" />
+        )}
+      </ChartWrapper>
+
+      {/* Chart 3: Wastegate Position vs RPM by gear */}
+      <ChartWrapper title="Wastegate Position vs RPM (by Gear)" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbWastegateVsRpm} />}>
+        <ScatterChart
+          data={timeSeries}
+          xField="engineRpm"
+          yField="wastegateCommFinalPosMm"
+          colorField="gearPosition"
+          xLabel="RPM"
+          yLabel="Commanded WG (mm)"
+          height={280}
+        />
+      </ChartWrapper>
+
+      {/* Chart 4: Boost Overshoot Detection */}
+      <ChartWrapper title="Boost Overshoot vs Wastegate Position" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbBoostOvershoot} />}>
+        {overshootData.xs.length > 0 ? (
+          <Plot
+            data={[
+              {
+                x: overshootData.xs,
+                y: overshootData.ys,
+                type: "scattergl" as const,
+                mode: "markers" as const,
+                marker: { color: CHART_COLORS.subaruRed, size: 4, opacity: 0.6 },
+                hovertemplate: "WG Pos: %{x:.1f} mm<br>Overshoot: %{y:.2f} psi<extra></extra>",
+              },
+            ]}
+            layout={{
+              ...BASE_LAYOUT,
+              height: 280,
+              xaxis: { ...BASE_LAYOUT.xaxis, title: { text: "Wastegate Position (mm)", font: { size: 10, color: CHART_COLORS.textMuted } } },
+              yaxis: { ...BASE_LAYOUT.yaxis, title: { text: "Overshoot (psi)", font: { size: 10, color: CHART_COLORS.textMuted } } },
+            }}
+            config={BASE_CONFIG as Plotly.Config}
+            style={{ width: "100%", height: "100%" }}
+            useResizeHandler
+          />
+        ) : (
+          <div data-chart-empty className="hidden" />
+        )}
       </ChartWrapper>
     </div>
   );

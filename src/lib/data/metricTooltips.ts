@@ -242,6 +242,176 @@ export const METRIC_TOOLTIPS: Record<string, MetricTooltipContent> = {
     interpretation: "Voltage dropping under electrical load suggests a weak alternator; sagging at idle but recovering at RPM points to belt tension.",
   },
 
+  // OBD2 insight charts
+  thermalDelta: {
+    axis: "Y-axis shows oil temperature minus coolant temperature in °C.",
+    values: [
+      "5–15°C is normal — oil runs warmer than coolant due to internal friction.",
+      ">25°C growing gap suggests oil cooler degradation or low oil level.",
+    ],
+    interpretation: "A widening delta under load that doesn't recover indicates oil cooling capacity is insufficient.",
+  },
+  coolantStability: {
+    axis: "Y-axis shows rolling standard deviation of coolant temp over a 60-second window.",
+    values: [
+      "< 1°C variance at operating temp is stable — thermostat is functioning correctly.",
+      "> 3°C variance means the thermostat is hunting or there's an air pocket in the cooling system.",
+    ],
+    interpretation: "Spikes during idle after highway driving suggest a failing thermostat; sustained instability points to air in the system.",
+  },
+  engineCombined: {
+    axis: "Left Y-axis shows engine RPM; right Y-axis shows load (%) and throttle position (%).",
+    values: [
+      "RPM and load should move together — high RPM with low load means the CVT is freewheeling.",
+      "High load at low RPM means the engine is lugging — watch for knock correction.",
+    ],
+    interpretation: "Throttle position shows driver intent; load shows engine response. A gap between them indicates CVT delay.",
+  },
+  timingKnockCombined: {
+    axis: "Y-axis shows timing advance and knock correction in degrees BTDC.",
+    values: [
+      "Timing advance drops when knock correction goes negative — this is the ECU protecting the engine.",
+      "Timing recovery after a knock event should be quick; slow recovery means persistent knock source.",
+    ],
+    interpretation: "Overlaying both traces reveals cause and effect — every knock dip should have a corresponding timing pull.",
+  },
+  volumetricEfficiency: {
+    axis: "Y-axis shows estimated volumetric efficiency as a percentage.",
+    values: [
+      "80–95% is typical for a healthy NA engine; higher at peak torque RPM.",
+      "< 70% across the range suggests intake restriction or clogged air filter.",
+    ],
+    interpretation: "VE should peak around 3500–4500 RPM for the FB25 — a flat or declining curve at peak RPM means breathing problems.",
+  },
+  iatHeatSoak: {
+    axis: "Y-axis shows intake air temperature (°C); color shows engine load.",
+    values: [
+      "Rising IAT during stop-and-go (low load) is heat soak from the engine bay.",
+      "IAT dropping on the highway is the ram air effect cooling the intake.",
+    ],
+    interpretation: "IAT not recovering after highway driving suggests poor airbox heat shielding or a missing air intake duct.",
+  },
+  mafVsRpm: {
+    axis: "X-axis shows RPM; Y-axis shows MAF air flow (g/s).",
+    values: [
+      "Should be a clean upward sweep — MAF increases with RPM.",
+      "Flattening at high RPM indicates a restrictive air filter, clogged airbox, or MAF sensor limit.",
+    ],
+    interpretation: "Good for before/after comparisons — overlay data from before and after an intake swap to validate the mod.",
+  },
+  fuelTrimVsRpm: {
+    axis: "X-axis shows RPM; Y-axis shows short-term fuel trim (%); color shows engine load.",
+    values: [
+      "Trim should center near 0% across all RPM/load combinations.",
+      "Consistent positive trim at specific RPM/load = vacuum leak or lean condition in that operating range.",
+    ],
+    interpretation: "Clusters of high positive trim at idle + low load is the classic vacuum leak signature.",
+  },
+  fuelTrimStability: {
+    axis: "Y-axis shows rolling standard deviation of short-term fuel trim over a 30-second window.",
+    values: [
+      "< 2% std dev means stable fueling — ECU corrections are minor.",
+      "> 5% std dev means the ECU is hunting — check for intermittent injector clog or flaky O2 sensor.",
+    ],
+    interpretation: "Spikes in instability that correlate with specific RPM ranges point to injector or sensor issues at those operating points.",
+  },
+  ltftDrift: {
+    axis: "Y-axis shows long-term fuel trim (%) over the session duration.",
+    values: [
+      "Stable LTFT within a session is expected — it's a learned value that changes slowly.",
+      "Drift within a single session suggests a warming O2 sensor, exhaust leak reaching operating temp, or failing MAF.",
+    ],
+    interpretation: "LTFT drifting positive as the engine warms up often indicates a small exhaust leak that opens with thermal expansion.",
+  },
+  dynoChart: {
+    axis: "X-axis shows RPM; left Y-axis shows horsepower; right Y-axis shows torque (Nm).",
+    values: [
+      "Peak HP occurs at high RPM; peak torque at mid-range. The crossover point reveals the engine's character.",
+      "These are wheel HP/torque — subtract ~15% drivetrain loss for engine figures (uncorrected for aero drag).",
+    ],
+    interpretation: "Compare across pulls — consistent curves mean reliable data; wide variation suggests inconsistent WOT technique.",
+  },
+  peakTrend: {
+    axis: "X-axis shows pull number (chronological); Y-axis shows peak HP and peak torque per pull.",
+    values: [
+      "Declining peaks across pulls = heat soak. Rising then stable = normal warm-up.",
+      "First 1-2 pulls are often lower (cold engine/tires) — look at pulls 3+ for true peak.",
+    ],
+    interpretation: "This is the first thing tuners check at the track — if peaks drop after 3-4 pulls, the car needs more cooling.",
+  },
+  powerToWeight: {
+    axis: "X-axis shows vehicle speed (km/h); Y-axis shows power-to-weight ratio (hp/kg).",
+    values: [
+      "Higher ratio = more usable acceleration at that speed.",
+      "The curve shape shows the usable acceleration envelope for track planning.",
+    ],
+    interpretation: "Flat spots in the curve reveal speed ranges where the car is least responsive — useful for choosing shift points.",
+  },
+  throttleSpeedLag: {
+    axis: "Y-axis shows the time lag (ms) between throttle input and speed change.",
+    values: [
+      "100-300ms is typical for a CVT — ratio change takes time.",
+      ">500ms sustained lag suggests the CVT is struggling to find the right ratio.",
+    ],
+    interpretation: "Increasing lag over time may indicate CVT fluid degradation; compare against fresh fluid data.",
+  },
+  ratioError: {
+    axis: "Y-axis shows CVT ratio error (actual − target); color shows throttle position.",
+    values: [
+      "±0.05 is normal tracking lag; the CVT needs time to change ratio.",
+      "Persistent error > 0.1 under load (high throttle, colored red) suggests belt slip or worn pulleys.",
+    ],
+    interpretation: "Error spikes during hard acceleration that don't recover quickly are the early warning sign of CVT chain wear.",
+  },
+  torqueConverterSlip: {
+    axis: "X-axis shows RPM; Y-axis shows torque converter slip (%); color shows lock-up duty.",
+    values: [
+      "0-2% slip when lock-up duty is high (blue/green) — converter is locked, nearly 1:1.",
+      "5-15% slip when lock-up is low (red) — converter is slipping to multiply torque. This is normal at low speed.",
+    ],
+    interpretation: "High slip (>5%) when lock-up duty is also high means the torque converter clutch is failing — expensive repair ahead.",
+  },
+  understeerOversteer: {
+    axis: "X-axis shows steering angle (°); Y-axis shows front-rear speed delta (km/h).",
+    values: [
+      "Positive delta at large steering angles = understeer (front wheels scrubbing).",
+      "Negative delta at large steering angles = oversteer (rear sliding out).",
+    ],
+    interpretation: "A consistent pattern reveals the car's handling balance — Subaru AWD typically shows mild understeer as designed.",
+  },
+  alignmentCheck: {
+    axis: "Y-axis shows left-right wheel speed difference (km/h) during straight-line driving only.",
+    values: [
+      "Should be near zero (±0.5 km/h) during straight-line driving.",
+      "Consistent offset > 1 km/h means alignment is off, one tire is low, or a brake is dragging.",
+    ],
+    interpretation: "Filter to straight-line only (steering < 5°) removes cornering noise — any remaining offset is a real issue.",
+  },
+  torqueSplit: {
+    axis: "Y-axis shows estimated front/rear torque split as stacked percentages.",
+    values: [
+      "Default ATS system is 60:40 (front:rear) — shown as ~40% rear area.",
+      "Maximum rear is 50% (50:50 split) — the ATS system cannot send more torque rearward.",
+    ],
+    interpretation: "Estimated from AWD solenoid current using community-derived sigmoidal mapping, not official Subaru calibration.",
+  },
+  awdVsThrottle: {
+    axis: "X-axis shows throttle position (%); Y-axis shows estimated rear torque (%); color shows vehicle speed.",
+    values: [
+      "Higher throttle should engage more rear torque — the ECU sends more current to prepare for wheel slip.",
+      "Flat response (no increase with throttle) may indicate a solenoid or wiring issue.",
+    ],
+    interpretation: "Compare low-speed vs high-speed points — at low speed the system engages more aggressively for traction.",
+  },
+  awdVsCvtTemp: {
+    axis: "X-axis shows CVT fluid temp (°C); Y-axis shows estimated rear torque (%); color shows throttle position.",
+    values: [
+      "Same solenoid current at different temps produces different actual torque transfer (clutch friction varies with ATF temp).",
+      "Engagement dropping at high temps (>100°C) = clutch plate fade from overheated ATF.",
+    ],
+    interpretation: "If rear torque at WOT drops as CVT temp climbs, the transfer clutch is thermally limited — consider a CVT cooler upgrade.",
+  },
+
   // COBB metrics
   cobbBoost: {
     axis: "Y-axis shows boost pressure in psi — actual (primary) vs ECU target (secondary).",
@@ -354,5 +524,126 @@ export const METRIC_TOOLTIPS: Record<string, MetricTooltipContent> = {
       "Cams not reaching target advance suggest a sticking VVT actuator or low oil pressure.",
     ],
     interpretation: "Intake and exhaust cam timing should move in coordinated patterns — erratic or flat traces indicate an AVCS solenoid or oil supply issue.",
+  },
+  // ── COBB Graph Plan tooltips ──
+  cobbKnockVsRpm: {
+    axis: "X-axis shows RPM; Y-axis shows feedback knock (°); color shows boost pressure.",
+    values: [
+      "Knock events concentrated at specific RPM/boost zones = tune needs adjustment there.",
+      "Scattered knock across all RPM with high boost = fuel octane too low for this boost level.",
+    ],
+    interpretation: "Concentrated clusters are actionable — the tuner can retard timing in those specific cells. Random scatter means global issue (fuel, IAT).",
+  },
+  cobbDamRecovery: {
+    axis: "X-axis shows time; Y-axis shows DAM value (0–1); annotations show recovery duration.",
+    values: [
+      "Fast recovery (< 30 seconds) = transient knock (bad fuel slug, momentary heat spike).",
+      "Slow recovery (> 2 minutes) = persistent knock source needs investigation.",
+    ],
+    interpretation: "DAM that drops and never recovers within the session is a red flag — do not continue WOT pulls until resolved.",
+  },
+  cobbFineKnockHeatmap: {
+    axis: "X-axis shows RPM bins; Y-axis shows load bins; color shows average fine knock learn (°).",
+    values: [
+      "Green cells (near 0°) = engine is happy in that operating range.",
+      "Red cells (large negative) = ECU has permanently pulled timing — tune is too aggressive there.",
+    ],
+    interpretation: "This is the primary tuner diagnostic view — red cells tell you exactly where in the RPM/load map to retard timing.",
+  },
+  cobbBoostVsRpmGear: {
+    axis: "X-axis shows RPM; Y-axis shows boost pressure (psi); color shows gear position.",
+    values: [
+      "Boost should rise steeply from ~2500 RPM and plateau. Each gear should show a similar curve.",
+      "Lower gears (1st-2nd) may show lower peak boost due to shorter time in boost range.",
+    ],
+    interpretation: "Comparing boost curves across gears reveals load-dependent turbo behavior — inconsistent curves suggest wastegate tuning issues.",
+  },
+  cobbBoostErrorHist: {
+    axis: "X-axis shows boost error (actual − target) in psi; Y-axis shows frequency count.",
+    values: [
+      "Tight distribution centered at 0 = good tune, wastegate is tracking target well.",
+      "Skewed negative = chronic underboost (check turbo, wastegate actuator, boost leaks).",
+    ],
+    interpretation: "The shape tells the story — bimodal distribution suggests two distinct operating regimes (spool-up vs steady-state).",
+  },
+  cobbAfrLearningHeatmap: {
+    axis: "X-axis shows RPM bins; Y-axis shows load bins (g/rev); color shows AF Learning 1 (%).",
+    values: [
+      "Green cells (near 0%) = base map is accurate for that operating range.",
+      "Red cells (large positive/negative) = ECU is compensating heavily — base map needs correction.",
+    ],
+    interpretation: "Large learning corrections after a reflash suggest the OTS map doesn't match your injectors or fuel system.",
+  },
+  cobbAfrVsBoost: {
+    axis: "X-axis shows boost (psi); Y-axis shows actual AFR; color shows RPM.",
+    values: [
+      "Under boost, AFR should go rich (11.0-11.8:1) for safety — this protects pistons from detonation.",
+      "Lean spots at high boost (AFR > 12.0:1) are the highest-risk data points in any COBB log.",
+    ],
+    interpretation: "⚠️ This is the most important safety graph for tuned turbo cars. Any lean outliers at high boost demand immediate investigation — check fuel pressure, injector duty, and boost target.",
+  },
+  cobbWastegateErrorVsBoost: {
+    axis: "X-axis shows boost (psi); Y-axis shows wastegate error (actual − commanded) in mm; color shows RPM.",
+    values: [
+      "Error near 0 across all boost levels = wastegate is tracking well.",
+      "Large errors at high boost = actuator is struggling — possible mechanical binding or weak actuator.",
+    ],
+    interpretation: "Errors that grow with boost suggest the actuator can't overcome exhaust backpressure — check actuator spring rate.",
+  },
+  cobbWastegateVsRpm: {
+    axis: "X-axis shows RPM; Y-axis shows commanded wastegate position (mm); color shows gear.",
+    values: [
+      "Shows the ECU's wastegate control strategy across the rev range.",
+      "Position should increase (open more) at higher RPM to control boost.",
+    ],
+    interpretation: "Comparing across gears reveals load-dependent behavior — if the curve shifts significantly per gear, the boost control is load-compensating correctly.",
+  },
+  cobbBoostOvershoot: {
+    axis: "X-axis shows wastegate position (mm); Y-axis shows boost overshoot (actual − target when positive) in psi.",
+    values: [
+      "Overshoot < 1 psi is normal transient behavior during spool-up.",
+      "> 3 psi overshoot at specific wastegate positions = tuning opportunity (adjust wastegate duty at that opening).",
+    ],
+    interpretation: "Overshoots that correlate with specific wastegate positions reveal where the PID controller needs adjustment.",
+  },
+  cobbFuelPressureCombined: {
+    axis: "Left Y-axis shows fuel pressure (psi) — actual vs target; right Y-axis shows injection timing (°).",
+    values: [
+      "Actual tracking target closely = fuel pump is keeping up with demand.",
+      "Actual dropping below target at high RPM = pump can't supply enough fuel volume.",
+    ],
+    interpretation: "Cross-reference with injector duty cycle — if duty is high AND pressure is dropping, the fuel system is at its limit.",
+  },
+  cobbFuelPressureError: {
+    axis: "X-axis shows RPM; Y-axis shows fuel pressure error (actual − target) in psi; color shows injector duty cycle.",
+    values: [
+      "Negative error (actual < target) at high RPM + high duty = fuel system can't keep up.",
+      "This is a critical safety indicator — lean fueling under boost causes detonation.",
+    ],
+    interpretation: "If error goes negative only above a certain RPM/duty threshold, the fuel pump is the bottleneck. Consider a fuel pump upgrade.",
+  },
+  cobbInjectorHeadroom: {
+    axis: "X-axis shows RPM bins; Y-axis shows boost bins (psi); color shows injector headroom (100% − duty cycle).",
+    values: [
+      "Green cells (>20% headroom) = plenty of injector capacity remaining.",
+      "Red cells (<15% headroom) = nearing injector limit — fueling may go lean under sustained demand.",
+    ],
+    interpretation: "Quick visual answer to 'do I need bigger injectors?' — if high-RPM high-boost cells are red, the answer is yes.",
+  },
+  cobbCamVsRpm: {
+    axis: "X-axis shows RPM; Y-axis shows cam advance (°) for intake and exhaust; color shows engine load.",
+    values: [
+      "Intake cam advances aggressively (15-30°) at mid-RPM for torque; more conservative at low/high RPM.",
+      "Exhaust cam timing is typically less variable — large swings suggest AVCS solenoid issues.",
+    ],
+    interpretation: "Smooth transitions across RPM = healthy AVCS. Erratic scatter = sticking solenoid or low oil pressure in that RPM range.",
+  },
+  cobbAvcsResponse: {
+    axis: "X-axis shows RPM; Y-axis shows rate of cam angle change (°/second).",
+    values: [
+      "Fast cam movement (high °/s) = AVCS solenoids are responsive, oil pressure is good.",
+      "Slow cam movement at specific RPM zones = sticky solenoid or oil viscosity issue.",
+    ],
+    interpretation: "Oil thinning at high temp → lower hydraulic pressure → sluggish phaser. Compare intake vs exhaust response — if one is slow and the other isn't, it's solenoid-specific.",
   },
 };
