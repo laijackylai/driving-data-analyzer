@@ -72,3 +72,22 @@ src/
 - **Glass-morphism CSS**: Requires `backdrop-filter` browser support; graceful degradation for older browsers
 - **Safe area insets**: CSS env() variables used for notched mobile devices with fallbacks
 - **Deleted files**: `src/lib/data/analyzer.ts` and `validators.ts` were replaced by `obd2Analyzer.ts`, `obd2Parser.ts`, `obd2Validators.ts`
+
+## Agent-team operating system (added 2026-07-23)
+
+This repo now also runs the reusable multi-agent operating system from `laijackylai/agt_1`:
+`.claude/agents/` (orchestrator, research-technical/critical, architect, ui-ux, frontend/backend/
+data-infra developers, qa-engineer, release-engineer), `.claude/commands/` (`/start-project`,
+`/research`, `/plan-feature`, `/implement-task`, `/review-task`, `/release-check`), an Obsidian
+vault at `vault/`, and validation tooling at `scripts/`+`tests/`.
+
+- **Everything above this section is this project's own pre-existing convention and stays
+  authoritative** — the OS does not override it.
+- Canonical product/architecture/task state now lives in `vault/`, not only in `docs/plan/` or
+  chat. `docs/plan/` and `docs/superpowers/plans/` remain valid working notes; anything that
+  should persist as a decision gets promoted into `vault/`.
+- Approval gates (architecture needs human sign-off, QA is independent, release needs human
+  sign-off) apply from here forward. See root-level `vault/HOME.md` for navigation and
+  `agt_1`'s `README.md` for the full workflow explanation.
+- Run `python3 scripts/validate-agent-system.py` and `python3 -m unittest discover -s tests -v`
+  after any change to `.claude/`, `vault/` structure, or the scripts themselves.
