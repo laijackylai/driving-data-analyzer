@@ -55,3 +55,4 @@ logs/
 next-env.d.ts
 sample-data.csv
 .worktrees
+__pycache__/
