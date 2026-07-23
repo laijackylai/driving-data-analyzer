@@ -2,7 +2,7 @@
 doc_type: task
 task_id: TASK-004
 title: Stabilize flaky DashboardView return-to-LANDING test
-status: approved
+status: released
 owner: frontend-developer
 reviewer: qa-engineer
 priority: P2
@@ -244,7 +244,7 @@ by hand before accepting the diagnosis.
 - `git status --short`: identical tracked-file list to the one recorded during TASK-001/002/003
   QA verification (same 20 modified files, no new ones) — confirms no file outside
   `src/test/DashboardView.test.tsx` was touched by this task.
-- The two new vault files (`vault/05-tasks/review/TASK-004-stabilize-dashboardview-flake.md`,
+- The two new vault files (`vault/05-tasks/completed/TASK-004-stabilize-dashboardview-flake.md`,
   `vault/06-implementation/TASK-004-implementation.md`) are the only vault additions attributable
   to this task (vault/ is untracked as a whole in git, consistent with prior sessions).
 
@@ -284,6 +284,7 @@ this flake as fixed, attributed to TASK-004.
 | 2026-07-23 | draft → ready | orchestrator | Root cause and write scope already established via QA's independent, repeated characterization during TASK-001/003 verification (production component confirmed untouched); no new diagnosis needed before starting. |
 | 2026-07-23 | ready → active → implementation-complete | frontend-developer | Investigated, revised the root-cause diagnosis after empirical testing disproved the task's working assumption about the `PixelizeEffect` mock timer, fixed the actual defect (ambiguous `vi.waitFor` precondition), and verified stability: 15/15 isolated runs, 20/20 full-file runs, 5/5 full-suite runs, clean type-check. See Implementation evidence. |
 | 2026-07-23 | implementation-complete → qa-review → approved | qa-engineer / orchestrator | Independent QA PASS: root cause confirmed by tracing DashboardView state machine; 13/13 full-file runs + 5/5 full suites green; write scope clean. Advanced to approved per QA evidence (see QA evidence section and vault/07-qa/reports/TASK-004-qa-report.md). |
+| 2026-07-23 | approved → released | human + orchestrator | Human release sign-off given 2026-07-23. Code change already committed with the REQ-6 batch (`2697181`); repo-wide `npm test` stable 114/114. Task file moved to `completed/` per lane convention. |
 
 ## Handoff notes
 ### Handoff: TASK-004 — orchestrator → frontend-developer

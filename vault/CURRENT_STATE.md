@@ -26,22 +26,20 @@ Roadmap approved by human 2026-07-23 — see [[00-product/roadmap]]. Phases: 0 s
 trends, 4 handling dynamics, 5 profile system (REQ-7). REQ-9/10/11 parked. Goals: engine
 health trends + handling dynamics; multi-car later, owner's Subaru first.
 
-Phase 0 (stabilize) completed 2026-07-23: TASK-001/002/003 released (human sign-off),
-TASK-004 (DashboardView flake fix, surfaced during QA) approved awaiting release sign-off.
-Repo-wide `npm test` green and stable (114/114). REQ-6 WIP and the agent-OS vault committed
+Phase 0 (stabilize) completed 2026-07-23: TASK-001/002/003/004 all released on explicit human
+sign-off (TASK-004 — the DashboardView flake fix surfaced during QA — signed off later the same
+day). Repo-wide `npm test` green and stable (114/114). REQ-6 WIP and the agent-OS vault committed
 to `master` the same day; GPS coordinates in `public/examples/example-drive.csv` anonymized
 (random unrecorded offset) before commit — original kept locally in `debug/` (untracked).
+Phase 1 (finish REQ-6 derived-metrics charts for OBDLink + COBB inputs) kicked off 2026-07-23
+via `/plan-feature`.
 
-TASK-001/002/003 independently QA-verified 2026-07-23 (verdict PASS on each) and advanced
-`qa-review` → `approved` by the orchestrator; moved from `active/` to `review/` per lane
-convention. Not yet `released` — requires explicit human approval, and their underlying source
-diffs remain uncommitted (do not commit/stage/discard without explicit human instruction). QA's
-verification also surfaced a shared, independently-confirmed pre-existing flake in
-`DashboardView.test.tsx` (unrelated to all three tasks), now tracked as TASK-004. **Open QA
-housekeeping note** (see [[05-tasks/BACKLOG]] for full detail): `vault/07-qa/traceability-matrix.md`
-and the affected `vault/06-implementation/*.md` notes still reference the old `active/TASK-00x...`
-paths and were not updated to reflect the `approved` status/file moves — out of orchestrator write
-scope, flagged for qa-engineer/developers to reconcile.
+History note: TASK-001/002/003 were independently QA-verified 2026-07-23 (verdict PASS on each),
+advanced through `approved`, and `released` the same day on explicit human sign-off; their source
+diffs are committed (REQ-6 batch). QA's verification also surfaced a shared, independently-confirmed
+pre-existing flake in `DashboardView.test.tsx` (unrelated to all three tasks), fixed as TASK-004
+(also released 2026-07-23). The earlier QA-housekeeping note about stale `active/TASK-00x` wikilinks
+was resolved 2026-07-23 — see [[05-tasks/BACKLOG]].
 
 ## Auto-generated summary
 
@@ -64,7 +62,7 @@ _None._
 | TASK-001 | Fix stale test expectations from in-progress derived-metrics work (frontend/test layer) | released | frontend-developer | qa-engineer | P1 | `vault/05-tasks/completed/TASK-001-fix-stale-frontend-tests.md` |
 | TASK-002 | Fix stale cobbAnalyzer fuel-cut-event test fixture | released | backend-developer | qa-engineer | P1 | `vault/05-tasks/completed/TASK-002-fix-cobb-injector-test.md` |
 | TASK-003 | Fix stale DotLoader test (pre-existing, unrelated to REQ-6) | released | frontend-developer | qa-engineer | P2 | `vault/05-tasks/completed/TASK-003-fix-dotloader-test.md` |
-| TASK-004 | Stabilize flaky DashboardView return-to-LANDING test | approved | frontend-developer | qa-engineer | P2 | `vault/05-tasks/review/TASK-004-stabilize-dashboardview-flake.md` |
+| TASK-004 | Stabilize flaky DashboardView return-to-LANDING test | released | frontend-developer | qa-engineer | P2 | `vault/05-tasks/completed/TASK-004-stabilize-dashboardview-flake.md` |
 
 <!-- END AUTO-GENERATED -->
 

@@ -7,7 +7,7 @@ date: 2026-07-23
 
 # TASK-004 — Implementation note
 
-See [[../05-tasks/review/TASK-004-stabilize-dashboardview-flake|TASK-004]] for full task context.
+See [[../05-tasks/completed/TASK-004-stabilize-dashboardview-flake|TASK-004]] for full task context.
 This note summarizes the same evidence recorded in that task's "Implementation evidence" section.
 
 ## Changed files
