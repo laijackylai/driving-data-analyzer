@@ -42,6 +42,9 @@ coverage/
 *.csv
 *.parquet
 !src/lib/data/
+# Anonymized example logs only (GPS offset applied) - raw logs stay ignored
+!public/examples/example-drive.csv
+!public/examples/example-cobb-drive.csv
 
 # Logs
 *.log
