@@ -10,6 +10,7 @@ import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -19,13 +20,13 @@ interface CobbInjectorTabProps {
 }
 
 export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
+  const { timeRange, isRangeActive } = useTimeRange();
   const startTime = timeSeries[0]?.timestamp ?? 0;
 
   // Fuel pressure error: actual - target
   const fuelPressureErrorData = useMemo(() => {
-    const xs: number[] = [];
-    const ys: number[] = [];
-    const colors: number[] = [];
+    const inRange: { x: number; y: number; color: number }[] = [];
+    const outRange: { x: number; y: number }[] = [];
     for (const d of timeSeries) {
       if (
         typeof d.engineRpm !== "number" ||
@@ -33,12 +34,19 @@ export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
         typeof d.fuelPressureTargetPsi !== "number"
       )
         continue;
-      xs.push(d.engineRpm);
-      ys.push(d.fuelPressurePsi - d.fuelPressureTargetPsi);
-      colors.push(typeof d.injDutyCycle === "number" ? d.injDutyCycle : 0);
+      const point = {
+        x: d.engineRpm,
+        y: d.fuelPressurePsi - d.fuelPressureTargetPsi,
+        color: typeof d.injDutyCycle === "number" ? d.injDutyCycle : 0,
+      };
+      if (isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
+        outRange.push(point);
+      } else {
+        inRange.push(point);
+      }
     }
-    return { xs, ys, colors };
-  }, [timeSeries]);
+    return { inRange, outRange };
+  }, [timeSeries, timeRange, isRangeActive]);
 
   // Injector headroom heatmap: RPM × Boost, value = 100 - duty cycle
   const headroomData = useMemo(
@@ -102,16 +110,29 @@ export function CobbInjectorTab({ timeSeries, stats }: CobbInjectorTabProps) {
 
       {/* Chart 3: Fuel Pressure Error vs RPM */}
       <ChartWrapper title="Fuel Pressure Error vs RPM" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbFuelPressureError} />}>
-        {fuelPressureErrorData.xs.length > 0 ? (
+        {fuelPressureErrorData.inRange.length > 0 || fuelPressureErrorData.outRange.length > 0 ? (
           <Plot
             data={[
+              ...(fuelPressureErrorData.outRange.length > 0
+                ? [
+                    {
+                      x: fuelPressureErrorData.outRange.map((p) => p.x),
+                      y: fuelPressureErrorData.outRange.map((p) => p.y),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.quaternary, size: 3, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
               {
-                x: fuelPressureErrorData.xs,
-                y: fuelPressureErrorData.ys,
+                x: fuelPressureErrorData.inRange.map((p) => p.x),
+                y: fuelPressureErrorData.inRange.map((p) => p.y),
                 type: "scattergl" as const,
                 mode: "markers" as const,
                 marker: {
-                  color: fuelPressureErrorData.colors,
+                  color: fuelPressureErrorData.inRange.map((p) => p.color),
                   colorscale: [[0, CHART_COLORS.quaternary], [1, CHART_COLORS.subaruRed]],
                   size: 3,
                   opacity: 0.6,

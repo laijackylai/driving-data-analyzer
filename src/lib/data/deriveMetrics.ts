@@ -6,6 +6,11 @@ import {
   FuelSpeedBucket,
   EngineZonePoint,
   AWDEngagementEvent,
+  ThermalDeltaPoint,
+  TorqueSplitPoint,
+  RatioErrorPoint,
+  TorqueConverterSlipPoint,
+  TimeSeriesRow,
 } from "@/types";
 
 function computeWheelSpeedDiffs(data: OBD2DataPoint[]): WheelSpeedDiff[] {
@@ -137,6 +142,107 @@ function computeFuelDistanceSeries(data: OBD2DataPoint[]): { distance: number; f
   return series;
 }
 
+function computeThermalDelta(data: OBD2DataPoint[]): ThermalDeltaPoint[] {
+  const result: ThermalDeltaPoint[] = [];
+  for (const d of data) {
+    if (typeof d.oilTemp === "number" && typeof d.coolantTemp === "number") {
+      result.push({
+        timestamp: d.timestamp,
+        delta: d.oilTemp - d.coolantTemp,
+        engineLoad: d.engineLoad,
+      });
+    }
+  }
+  return result;
+}
+
+/**
+ * Sigmoidal AWD torque split estimation.
+ * Maps solenoid current (mA) → rear torque %.
+ */
+function computeTorqueSplit(data: OBD2DataPoint[]): TorqueSplitPoint[] {
+  const MAX_CURRENT = 1080;
+  const result: TorqueSplitPoint[] = [];
+  for (const d of data) {
+    const current = d.awdSolenoidActualCurrent;
+    if (typeof current !== "number") continue;
+    const normalized = Math.max(0, Math.min(current / MAX_CURRENT, 1));
+    const k = 6;
+    const x0 = 0.35;
+    const rearPct = 50 / (1 + Math.exp(-k * (normalized - x0)));
+    const frontPct = 100 - rearPct;
+    result.push({ timestamp: d.timestamp, frontPct, rearPct });
+  }
+  return result;
+}
+
+function computeRatioError(data: OBD2DataPoint[]): RatioErrorPoint[] {
+  const result: RatioErrorPoint[] = [];
+  for (const d of data) {
+    if (typeof d.actualGearRatio === "number" && typeof d.targetGearRatio === "number") {
+      result.push({
+        timestamp: d.timestamp,
+        error: d.actualGearRatio - d.targetGearRatio,
+        throttle: d.throttlePosition,
+      });
+    }
+  }
+  return result;
+}
+
+function computeTorqueConverterSlip(data: OBD2DataPoint[]): TorqueConverterSlipPoint[] {
+  const result: TorqueConverterSlipPoint[] = [];
+  for (const d of data) {
+    if (typeof d.turbineSpeed === "number" && typeof d.engineRpm === "number" && d.engineRpm > 0) {
+      result.push({
+        timestamp: d.timestamp,
+        slipPct: (1 - d.turbineSpeed / d.engineRpm) * 100,
+        lockUpDuty: d.lockUpDutyRatio,
+      });
+    }
+  }
+  return result;
+}
+
+export function computeVolumetricEfficiency(data: OBD2DataPoint[]): OBD2DataPoint[] {
+  const DISPLACEMENT_M3 = 0.002498;
+  const AIR_DENSITY = 1.225;
+  return data
+    .filter(
+      (d) =>
+        typeof d.mafAirFlowRate === "number" &&
+        typeof d.engineRpm === "number" &&
+        d.engineRpm! > 500
+    )
+    .map((d) => {
+      const theoreticalMaf =
+        ((DISPLACEMENT_M3 * d.engineRpm! * AIR_DENSITY) / (2 * 60)) * 1000;
+      return {
+        ...d,
+        volumetricEfficiency: (d.mafAirFlowRate! / theoreticalMaf) * 100,
+      } as OBD2DataPoint;
+    });
+}
+
+export function computeSTFTStability(data: OBD2DataPoint[]): TimeSeriesRow[] {
+  const WINDOW_S = 30;
+  const result: TimeSeriesRow[] = [];
+  const stftPts = data.filter((d) => typeof d.shortTermFuelTrim === "number");
+  for (let i = 0; i < stftPts.length; i++) {
+    const t = stftPts[i].timestamp;
+    const windowPts: number[] = [];
+    for (let j = i; j >= 0 && stftPts[j].timestamp >= t - WINDOW_S; j--) {
+      windowPts.push(stftPts[j].shortTermFuelTrim!);
+    }
+    if (windowPts.length < 3) continue;
+    const mean = windowPts.reduce((a, b) => a + b, 0) / windowPts.length;
+    const variance =
+      windowPts.reduce((a, b) => a + (b - mean) ** 2, 0) / windowPts.length;
+    result.push({ timestamp: t, stftStdDev: Math.sqrt(variance) });
+  }
+  return result;
+}
+
 /**
  * Compute all derived metrics from pivoted time-series data.
  */
@@ -148,5 +254,11 @@ export function computeDerivedMetrics(data: OBD2DataPoint[]): DerivedMetrics {
     engineZones: computeEngineZones(data),
     awdEngagementEvents: computeAWDEngagementEvents(data),
     fuelDistanceSeries: computeFuelDistanceSeries(data),
+    thermalDelta: computeThermalDelta(data),
+    torqueSplit: computeTorqueSplit(data),
+    ratioError: computeRatioError(data),
+    torqueConverterSlip: computeTorqueConverterSlip(data),
+    volumetricEfficiency: computeVolumetricEfficiency(data),
+    stftStability: computeSTFTStability(data),
   };
 }

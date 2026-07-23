@@ -9,6 +9,7 @@ import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -18,40 +19,40 @@ interface CobbAVCSTabProps {
 }
 
 export function CobbAVCSTab({ timeSeries, stats }: CobbAVCSTabProps) {
+  const { timeRange, isRangeActive } = useTimeRange();
   const startTime = timeSeries[0]?.timestamp ?? 0;
 
-  // Cam angle vs RPM — two traces (intake + exhaust) colored by load
+  // Cam angle vs RPM — split by in/out range
   const camVsRpmData = useMemo(() => {
-    const intakeRpm: number[] = [];
-    const intakeAngle: number[] = [];
-    const intakeLoad: number[] = [];
-    const exhaustRpm: number[] = [];
-    const exhaustAngle: number[] = [];
-    const exhaustLoad: number[] = [];
+    const intake = { inRange: [] as { rpm: number; angle: number; load: number }[], outRange: [] as { rpm: number; angle: number }[] };
+    const exhaust = { inRange: [] as { rpm: number; angle: number; load: number }[], outRange: [] as { rpm: number; angle: number }[] };
     for (const d of timeSeries) {
       const rpm = d.engineRpm;
       const load = d.calculatedLoadGRev;
       if (typeof rpm !== "number") continue;
+      const out = isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!);
       if (typeof d.avcsInLeft === "number") {
-        intakeRpm.push(rpm);
-        intakeAngle.push(d.avcsInLeft);
-        intakeLoad.push(typeof load === "number" ? load : 0);
+        if (out) {
+          intake.outRange.push({ rpm, angle: d.avcsInLeft });
+        } else {
+          intake.inRange.push({ rpm, angle: d.avcsInLeft, load: typeof load === "number" ? load : 0 });
+        }
       }
       if (typeof d.avcsExhLeft === "number") {
-        exhaustRpm.push(rpm);
-        exhaustAngle.push(d.avcsExhLeft);
-        exhaustLoad.push(typeof load === "number" ? load : 0);
+        if (out) {
+          exhaust.outRange.push({ rpm, angle: d.avcsExhLeft });
+        } else {
+          exhaust.inRange.push({ rpm, angle: d.avcsExhLeft, load: typeof load === "number" ? load : 0 });
+        }
       }
     }
-    return { intakeRpm, intakeAngle, intakeLoad, exhaustRpm, exhaustAngle, exhaustLoad };
-  }, [timeSeries]);
+    return { intake, exhaust };
+  }, [timeSeries, timeRange, isRangeActive]);
 
-  // AVCS response check: rate of change of cam angle (°/second)
+  // AVCS response check: rate of change of cam angle (°/second) — split by in/out range
   const avcsResponseData = useMemo(() => {
-    const intakeRpm: number[] = [];
-    const intakeRate: number[] = [];
-    const exhaustRpm: number[] = [];
-    const exhaustRate: number[] = [];
+    const intake = { inRange: [] as { rpm: number; rate: number }[], outRange: [] as { rpm: number; rate: number }[] };
+    const exhaust = { inRange: [] as { rpm: number; rate: number }[], outRange: [] as { rpm: number; rate: number }[] };
     for (let i = 1; i < timeSeries.length; i++) {
       const prev = timeSeries[i - 1];
       const curr = timeSeries[i];
@@ -59,23 +60,30 @@ export function CobbAVCSTab({ timeSeries, stats }: CobbAVCSTabProps) {
       if (dt <= 0 || dt > 1) continue;
       const rpm = curr.engineRpm;
       if (typeof rpm !== "number") continue;
+      const out = isRangeActive && (curr.timestamp < timeRange.start! || curr.timestamp > timeRange.end!);
       if (typeof curr.avcsInLeft === "number" && typeof prev.avcsInLeft === "number") {
         const rate = Math.abs(curr.avcsInLeft - prev.avcsInLeft) / dt;
         if (rate > 0.1) {
-          intakeRpm.push(rpm);
-          intakeRate.push(rate);
+          if (out) {
+            intake.outRange.push({ rpm, rate });
+          } else {
+            intake.inRange.push({ rpm, rate });
+          }
         }
       }
       if (typeof curr.avcsExhLeft === "number" && typeof prev.avcsExhLeft === "number") {
         const rate = Math.abs(curr.avcsExhLeft - prev.avcsExhLeft) / dt;
         if (rate > 0.1) {
-          exhaustRpm.push(rpm);
-          exhaustRate.push(rate);
+          if (out) {
+            exhaust.outRange.push({ rpm, rate });
+          } else {
+            exhaust.inRange.push({ rpm, rate });
+          }
         }
       }
     }
-    return { intakeRpm, intakeRate, exhaustRpm, exhaustRate };
-  }, [timeSeries]);
+    return { intake, exhaust };
+  }, [timeSeries, timeRange, isRangeActive]);
 
   return (
     <div className="space-y-4 pt-4">
@@ -104,19 +112,49 @@ export function CobbAVCSTab({ timeSeries, stats }: CobbAVCSTabProps) {
 
       {/* Chart 2: Cam Angle vs RPM (intake + exhaust, colored by load) */}
       <ChartWrapper title="Cam Angle vs RPM (by Load)" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbCamVsRpm} />}>
-        {camVsRpmData.intakeRpm.length > 0 || camVsRpmData.exhaustRpm.length > 0 ? (
+        {camVsRpmData.intake.inRange.length > 0 || camVsRpmData.exhaust.inRange.length > 0 ||
+         camVsRpmData.intake.outRange.length > 0 || camVsRpmData.exhaust.outRange.length > 0 ? (
           <Plot
             data={[
-              ...(camVsRpmData.intakeRpm.length > 0
+              // Out-of-range intake (greyed)
+              ...(camVsRpmData.intake.outRange.length > 0
                 ? [
                     {
-                      x: camVsRpmData.intakeRpm,
-                      y: camVsRpmData.intakeAngle,
+                      x: camVsRpmData.intake.outRange.map((p) => p.rpm),
+                      y: camVsRpmData.intake.outRange.map((p) => p.angle),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.primary, size: 3, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
+              // Out-of-range exhaust (greyed)
+              ...(camVsRpmData.exhaust.outRange.length > 0
+                ? [
+                    {
+                      x: camVsRpmData.exhaust.outRange.map((p) => p.rpm),
+                      y: camVsRpmData.exhaust.outRange.map((p) => p.angle),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.quaternary, size: 3, opacity: 0.15, symbol: "diamond" as const },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
+              // In-range intake
+              ...(camVsRpmData.intake.inRange.length > 0
+                ? [
+                    {
+                      x: camVsRpmData.intake.inRange.map((p) => p.rpm),
+                      y: camVsRpmData.intake.inRange.map((p) => p.angle),
                       type: "scattergl" as const,
                       mode: "markers" as const,
                       name: "Intake",
                       marker: {
-                        color: camVsRpmData.intakeLoad,
+                        color: camVsRpmData.intake.inRange.map((p) => p.load),
                         colorscale: [[0, CHART_COLORS.primary], [1, CHART_COLORS.amber]] as Plotly.ColorScale,
                         size: 3,
                         opacity: 0.6,
@@ -126,16 +164,17 @@ export function CobbAVCSTab({ timeSeries, stats }: CobbAVCSTabProps) {
                     },
                   ]
                 : []),
-              ...(camVsRpmData.exhaustRpm.length > 0
+              // In-range exhaust
+              ...(camVsRpmData.exhaust.inRange.length > 0
                 ? [
                     {
-                      x: camVsRpmData.exhaustRpm,
-                      y: camVsRpmData.exhaustAngle,
+                      x: camVsRpmData.exhaust.inRange.map((p) => p.rpm),
+                      y: camVsRpmData.exhaust.inRange.map((p) => p.angle),
                       type: "scattergl" as const,
                       mode: "markers" as const,
                       name: "Exhaust",
                       marker: {
-                        color: camVsRpmData.exhaustLoad,
+                        color: camVsRpmData.exhaust.inRange.map((p) => p.load),
                         colorscale: [[0, CHART_COLORS.quaternary], [1, CHART_COLORS.subaruRed]] as Plotly.ColorScale,
                         size: 3,
                         opacity: 0.6,
@@ -164,14 +203,44 @@ export function CobbAVCSTab({ timeSeries, stats }: CobbAVCSTabProps) {
 
       {/* Chart 3: AVCS Response Check */}
       <ChartWrapper title="AVCS Response — Rate of Change" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbAvcsResponse} />}>
-        {avcsResponseData.intakeRpm.length > 0 || avcsResponseData.exhaustRpm.length > 0 ? (
+        {avcsResponseData.intake.inRange.length > 0 || avcsResponseData.exhaust.inRange.length > 0 ||
+         avcsResponseData.intake.outRange.length > 0 || avcsResponseData.exhaust.outRange.length > 0 ? (
           <Plot
             data={[
-              ...(avcsResponseData.intakeRpm.length > 0
+              // Out-of-range intake (greyed)
+              ...(avcsResponseData.intake.outRange.length > 0
                 ? [
                     {
-                      x: avcsResponseData.intakeRpm,
-                      y: avcsResponseData.intakeRate,
+                      x: avcsResponseData.intake.outRange.map((p) => p.rpm),
+                      y: avcsResponseData.intake.outRange.map((p) => p.rate),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.primary, size: 3, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
+              // Out-of-range exhaust (greyed)
+              ...(avcsResponseData.exhaust.outRange.length > 0
+                ? [
+                    {
+                      x: avcsResponseData.exhaust.outRange.map((p) => p.rpm),
+                      y: avcsResponseData.exhaust.outRange.map((p) => p.rate),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.amber, size: 3, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
+              // In-range intake
+              ...(avcsResponseData.intake.inRange.length > 0
+                ? [
+                    {
+                      x: avcsResponseData.intake.inRange.map((p) => p.rpm),
+                      y: avcsResponseData.intake.inRange.map((p) => p.rate),
                       type: "scattergl" as const,
                       mode: "markers" as const,
                       name: "Intake",
@@ -180,11 +249,12 @@ export function CobbAVCSTab({ timeSeries, stats }: CobbAVCSTabProps) {
                     },
                   ]
                 : []),
-              ...(avcsResponseData.exhaustRpm.length > 0
+              // In-range exhaust
+              ...(avcsResponseData.exhaust.inRange.length > 0
                 ? [
                     {
-                      x: avcsResponseData.exhaustRpm,
-                      y: avcsResponseData.exhaustRate,
+                      x: avcsResponseData.exhaust.inRange.map((p) => p.rpm),
+                      y: avcsResponseData.exhaust.inRange.map((p) => p.rate),
                       type: "scattergl" as const,
                       mode: "markers" as const,
                       name: "Exhaust",

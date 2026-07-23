@@ -83,13 +83,17 @@ describe("analyzeCobbWastegate", () => {
 
 describe("analyzeCobbInjector", () => {
   it("counts fuel cut events", () => {
+    // 2 separate, non-contiguous fuel-cut runs: samples 2-3 form event 1,
+    // sample 4 resets the state back to no-cut, and sample 5 starts event 2.
     const points = makePoints([
-      { injDutyCycle: 50, injPulseWidth: 2.0, fuelCut: 0 },
-      { injDutyCycle: 0, injPulseWidth: 0, fuelCut: 4 },
-      { injDutyCycle: 0, injPulseWidth: 0, fuelCut: 4 },
+      { injDutyCycle: 50, injPulseWidth: 2.0, fuelCut: 0 },  // no cut
+      { injDutyCycle: 0, injPulseWidth: 0, fuelCut: 4 },     // event 1 starts
+      { injDutyCycle: 0, injPulseWidth: 0, fuelCut: 4 },     // event 1 continues (NOT a new event)
+      { injDutyCycle: 30, injPulseWidth: 1.5, fuelCut: 0 },  // gap — event 1 ends
+      { injDutyCycle: 0, injPulseWidth: 0, fuelCut: 3 },     // event 2 starts
     ]);
     const result = analyzeCobbInjector(points);
-    expect(result.fuelCutEventCount).toBe(2);
+    expect(result.fuelCutEventCount).toBe(2); // 2 events, not 4 non-zero samples
     expect(result.maxInjDutyCycle).toBe(50);
   });
 });

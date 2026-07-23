@@ -11,6 +11,7 @@ import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -20,6 +21,7 @@ interface CobbAFRTabProps {
 }
 
 export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
+  const { timeRange, isRangeActive } = useTimeRange();
   const startTime = timeSeries[0]?.timestamp ?? 0;
 
   const heatmapData = useMemo(
@@ -39,23 +41,28 @@ export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
     [timeSeries],
   );
 
-  // AFR vs Boost scatter data for custom Plotly chart (needs danger zone shape)
+  // AFR vs Boost scatter data with in/out range split
   const afrVsBoost = useMemo(() => {
-    const xs: number[] = [];
-    const ys: number[] = [];
-    const colors: number[] = [];
+    const inRange: { x: number; y: number; color: number }[] = [];
+    const outRange: { x: number; y: number }[] = [];
     for (const d of timeSeries) {
       if (
         typeof d.boostPsi !== "number" ||
         typeof d.afSens1Ratio !== "number"
       )
         continue;
-      xs.push(d.boostPsi);
-      ys.push(d.afSens1Ratio);
-      colors.push(typeof d.engineRpm === "number" ? d.engineRpm : 0);
+      if (isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
+        outRange.push({ x: d.boostPsi, y: d.afSens1Ratio });
+      } else {
+        inRange.push({
+          x: d.boostPsi,
+          y: d.afSens1Ratio,
+          color: typeof d.engineRpm === "number" ? d.engineRpm : 0,
+        });
+      }
     }
-    return { xs, ys, colors };
-  }, [timeSeries]);
+    return { inRange, outRange };
+  }, [timeSeries, timeRange, isRangeActive]);
 
   return (
     <div className="space-y-4 pt-4">
@@ -110,16 +117,29 @@ export function CobbAFRTab({ timeSeries, stats }: CobbAFRTabProps) {
 
       {/* Chart 4: AFR vs Boost (safety chart with danger zone) */}
       <ChartWrapper title="⚠️ AFR vs Boost — Safety Chart" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbAfrVsBoost} />}>
-        {afrVsBoost.xs.length > 0 ? (
+        {afrVsBoost.inRange.length > 0 || afrVsBoost.outRange.length > 0 ? (
           <Plot
             data={[
+              ...(afrVsBoost.outRange.length > 0
+                ? [
+                    {
+                      x: afrVsBoost.outRange.map((p) => p.x),
+                      y: afrVsBoost.outRange.map((p) => p.y),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.primary, size: 4, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
               {
-                x: afrVsBoost.xs,
-                y: afrVsBoost.ys,
+                x: afrVsBoost.inRange.map((p) => p.x),
+                y: afrVsBoost.inRange.map((p) => p.y),
                 type: "scattergl" as const,
                 mode: "markers" as const,
                 marker: {
-                  color: afrVsBoost.colors,
+                  color: afrVsBoost.inRange.map((p) => p.color),
                   colorscale: [[0, CHART_COLORS.primary], [1, CHART_COLORS.subaruRed]],
                   size: 4,
                   opacity: 0.7,

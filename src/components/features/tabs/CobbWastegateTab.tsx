@@ -10,6 +10,7 @@ import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -19,13 +20,13 @@ interface CobbWastegateTabProps {
 }
 
 export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
+  const { timeRange, isRangeActive } = useTimeRange();
   const startTime = timeSeries[0]?.timestamp ?? 0;
 
   // Wastegate error: actual - commanded
   const wastegateErrorData = useMemo(() => {
-    const xs: number[] = [];
-    const ys: number[] = [];
-    const colors: number[] = [];
+    const inRange: { x: number; y: number; color: number }[] = [];
+    const outRange: { x: number; y: number }[] = [];
     for (const d of timeSeries) {
       if (
         typeof d.boostPsi !== "number" ||
@@ -33,17 +34,24 @@ export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
         typeof d.wastegateCommFinalPosMm !== "number"
       )
         continue;
-      xs.push(d.boostPsi);
-      ys.push(d.wastegateActualPosMm - d.wastegateCommFinalPosMm);
-      colors.push(typeof d.engineRpm === "number" ? d.engineRpm : 0);
+      const point = {
+        x: d.boostPsi,
+        y: d.wastegateActualPosMm - d.wastegateCommFinalPosMm,
+        color: typeof d.engineRpm === "number" ? d.engineRpm : 0,
+      };
+      if (isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
+        outRange.push(point);
+      } else {
+        inRange.push(point);
+      }
     }
-    return { xs, ys, colors };
-  }, [timeSeries]);
+    return { inRange, outRange };
+  }, [timeSeries, timeRange, isRangeActive]);
 
   // Boost overshoot: filter where actual > target
   const overshootData = useMemo(() => {
-    const xs: number[] = [];
-    const ys: number[] = [];
+    const inRange: { x: number; y: number }[] = [];
+    const outRange: { x: number; y: number }[] = [];
     for (const d of timeSeries) {
       if (
         typeof d.boostPsi !== "number" ||
@@ -52,11 +60,18 @@ export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
         d.boostPsi <= d.targetBoostFinalRelPsi
       )
         continue;
-      xs.push(d.wastegateActualPosMm);
-      ys.push(d.boostPsi - d.targetBoostFinalRelPsi);
+      const point = {
+        x: d.wastegateActualPosMm,
+        y: d.boostPsi - d.targetBoostFinalRelPsi,
+      };
+      if (isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
+        outRange.push(point);
+      } else {
+        inRange.push(point);
+      }
     }
-    return { xs, ys };
-  }, [timeSeries]);
+    return { inRange, outRange };
+  }, [timeSeries, timeRange, isRangeActive]);
 
   return (
     <div className="space-y-4 pt-4">
@@ -85,16 +100,29 @@ export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
 
       {/* Chart 2: Wastegate Error vs Boost */}
       <ChartWrapper title="Wastegate Error vs Boost" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbWastegateErrorVsBoost} />}>
-        {wastegateErrorData.xs.length > 0 ? (
+        {wastegateErrorData.inRange.length > 0 || wastegateErrorData.outRange.length > 0 ? (
           <Plot
             data={[
+              ...(wastegateErrorData.outRange.length > 0
+                ? [
+                    {
+                      x: wastegateErrorData.outRange.map((p) => p.x),
+                      y: wastegateErrorData.outRange.map((p) => p.y),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.primary, size: 3, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
               {
-                x: wastegateErrorData.xs,
-                y: wastegateErrorData.ys,
+                x: wastegateErrorData.inRange.map((p) => p.x),
+                y: wastegateErrorData.inRange.map((p) => p.y),
                 type: "scattergl" as const,
                 mode: "markers" as const,
                 marker: {
-                  color: wastegateErrorData.colors,
+                  color: wastegateErrorData.inRange.map((p) => p.color),
                   colorscale: [[0, CHART_COLORS.primary], [1, CHART_COLORS.subaruRed]],
                   size: 3,
                   opacity: 0.6,
@@ -133,12 +161,25 @@ export function CobbWastegateTab({ timeSeries, stats }: CobbWastegateTabProps) {
 
       {/* Chart 4: Boost Overshoot Detection */}
       <ChartWrapper title="Boost Overshoot vs Wastegate Position" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cobbBoostOvershoot} />}>
-        {overshootData.xs.length > 0 ? (
+        {overshootData.inRange.length > 0 || overshootData.outRange.length > 0 ? (
           <Plot
             data={[
+              ...(overshootData.outRange.length > 0
+                ? [
+                    {
+                      x: overshootData.outRange.map((p) => p.x),
+                      y: overshootData.outRange.map((p) => p.y),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.subaruRed, size: 4, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
               {
-                x: overshootData.xs,
-                y: overshootData.ys,
+                x: overshootData.inRange.map((p) => p.x),
+                y: overshootData.inRange.map((p) => p.y),
                 type: "scattergl" as const,
                 mode: "markers" as const,
                 marker: { color: CHART_COLORS.subaruRed, size: 4, opacity: 0.6 },

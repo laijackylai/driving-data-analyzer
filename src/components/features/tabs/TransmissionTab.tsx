@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { OBD2DataPoint, DerivedMetrics, ThresholdConfig } from "@/types";
 import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { TimeSeriesChart, TimeSeriesRow } from "@/components/features/charts/TimeSeriesChart";
+import { ScatterChart } from "@/components/features/charts/ScatterChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
 
@@ -15,33 +17,30 @@ interface TransmissionTabProps {
 
 export function TransmissionTab({ timeSeries, derived, thresholds }: TransmissionTabProps) {
   const startTime = timeSeries[0]?.timestamp ?? 0;
-  const cvtRatioData: TimeSeriesRow[] = derived.cvtEffectiveRatio.map((p) => ({
+
+  const ratioErrorData: TimeSeriesRow[] = derived.ratioError.map((p) => ({
     timestamp: p.timestamp,
-    cvtEffectiveRatio: p.ratio,
+    ratioError: p.error,
+    throttlePosition: p.throttle,
   }));
+
+  const tcSlipData = useMemo<OBD2DataPoint[]>(() => {
+    return derived.torqueConverterSlip.map((p) => {
+      const matchingPoint = timeSeries.find((d) => d.timestamp === p.timestamp);
+      return {
+        timestamp: p.timestamp,
+        engineRpm: matchingPoint?.engineRpm,
+        tcSlipPct: p.slipPct,
+        lockUpDutyRatio: p.lockUpDuty,
+      } as OBD2DataPoint;
+    });
+  }, [derived.torqueConverterSlip, timeSeries]);
 
   return (
     <div className="space-y-4 pt-4">
-      {/* CVT temp */}
+      {/* Actual vs Target Gear Ratio + CVT Temp */}
       <ChartWrapper
-        title="CVT Temperature"
-        height={280}
-        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.cvtTemp} />}
-      >
-        <TimeSeriesChart
-          data={timeSeries}
-          traces={[{ field: "cvtTemp", name: "CVT Temp (°C)", color: CHART_COLORS.amber }]}
-          thresholdKey="cvtTemp"
-          thresholds={thresholds}
-          yAxisLabel="°C"
-          height={280}
-          startTime={startTime}
-        />
-      </ChartWrapper>
-
-      {/* Actual vs Target gear ratio */}
-      <ChartWrapper
-        title="Actual vs Target Gear Ratio"
+        title="Actual vs Target Gear Ratio + CVT Temp"
         height={280}
         tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.actualGearRatio} />}
       >
@@ -50,16 +49,20 @@ export function TransmissionTab({ timeSeries, derived, thresholds }: Transmissio
           traces={[
             { field: "actualGearRatio", name: "Actual", color: CHART_COLORS.primary },
             { field: "targetGearRatio", name: "Target", color: CHART_COLORS.subaruRed },
+            { field: "cvtTemp", name: "CVT Temp (°C)", color: CHART_COLORS.amber, yaxis: "y2" },
           ]}
+          thresholdKey="cvtTemp"
+          thresholds={thresholds}
           yAxisLabel="Ratio"
+          y2AxisLabel="°C"
           height={280}
           startTime={startTime}
         />
       </ChartWrapper>
 
-      {/* Pulley speeds */}
+      {/* Pulley Speeds + Lock-Up Duty */}
       <ChartWrapper
-        title="Pulley Speeds"
+        title="Pulley Speeds + Lock-Up Duty"
         height={280}
         tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.primaryPulleySpeed} />}
       >
@@ -67,57 +70,49 @@ export function TransmissionTab({ timeSeries, derived, thresholds }: Transmissio
           data={timeSeries}
           traces={[
             { field: "primaryPulleySpeed", name: "Primary (rpm)", color: CHART_COLORS.primary },
-            { field: "secondaryPulleySpeed", name: "Secondary (rpm)", color: CHART_COLORS.secondary, yaxis: "y2" },
+            { field: "secondaryPulleySpeed", name: "Secondary (rpm)", color: CHART_COLORS.secondary },
+            { field: "lockUpDutyRatio", name: "Lock-up (%)", color: CHART_COLORS.emerald, yaxis: "y2" },
           ]}
-          yAxisLabel="Primary rpm"
-          y2AxisLabel="Secondary rpm"
+          yAxisLabel="rpm"
+          y2AxisLabel="%"
           height={280}
           startTime={startTime}
         />
       </ChartWrapper>
 
-      {/* CVT effective ratio (derived) */}
-      <ChartWrapper title="CVT Effective Ratio (Derived)" height={250}>
-        <TimeSeriesChart
-          data={cvtRatioData}
-          traces={[{ field: "cvtEffectiveRatio", name: "Ratio", color: CHART_COLORS.tertiary }]}
-          yAxisLabel="Ratio"
-          height={250}
-          startTime={startTime}
-        />
-      </ChartWrapper>
-
-      {/* Lock-up duty ratio */}
+      {/* Ratio Error Timeline */}
       <ChartWrapper
-        title="Lock-Up Duty Ratio"
-        height={250}
-        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.lockUpDutyRatio} />}
-      >
-        <TimeSeriesChart
-          data={timeSeries}
-          traces={[{ field: "lockUpDutyRatio", name: "Lock-up (%)", color: CHART_COLORS.emerald }]}
-          yAxisLabel="%"
-          height={250}
-          startTime={startTime}
-        />
-      </ChartWrapper>
-
-      {/* Turbine speed vs Engine RPM */}
-      <ChartWrapper
-        title="Turbine Speed vs Engine RPM"
+        title="Ratio Error Timeline"
         height={280}
-        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.turbineSpeed} />}
+        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.ratioError} />}
       >
         <TimeSeriesChart
-          data={timeSeries}
+          data={ratioErrorData}
           traces={[
-            { field: "engineRpm", name: "Engine RPM", color: CHART_COLORS.primary },
-            { field: "turbineSpeed", name: "Turbine RPM", color: CHART_COLORS.amber, yaxis: "y2" },
+            { field: "ratioError", name: "Ratio Error", color: CHART_COLORS.primary },
+            { field: "throttlePosition", name: "Throttle (%)", color: CHART_COLORS.amber, yaxis: "y2" },
           ]}
-          yAxisLabel="Engine RPM"
-          y2AxisLabel="Turbine RPM"
+          yAxisLabel="Error"
+          y2AxisLabel="%"
           height={280}
           startTime={startTime}
+        />
+      </ChartWrapper>
+
+      {/* TC Slip vs RPM */}
+      <ChartWrapper
+        title="TC Slip vs RPM"
+        height={280}
+        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.torqueConverterSlip} />}
+      >
+        <ScatterChart
+          data={tcSlipData}
+          xField="engineRpm"
+          yField="tcSlipPct"
+          colorField="lockUpDutyRatio"
+          xLabel="Engine RPM"
+          yLabel="TC Slip (%)"
+          height={280}
         />
       </ChartWrapper>
     </div>

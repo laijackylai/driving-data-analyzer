@@ -11,6 +11,7 @@ import { BASE_LAYOUT, BASE_CONFIG, CHART_COLORS } from "@/lib/chartTheme";
 import { CobbStatCard } from "@/components/features/tabs/CobbStatCard";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+import { useTimeRange } from "@/hooks/useTimeRange";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -24,11 +25,12 @@ const DISPLACEMENT_M3 = 0.002387;
 const AIR_DENSITY = 1.225;
 
 export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
+  const { timeRange, isRangeActive } = useTimeRange();
   const startTime = timeSeries[0]?.timestamp ?? 0;
 
   const veData = useMemo(() => {
-    const xs: number[] = [];
-    const ys: number[] = [];
+    const inRange: { x: number; y: number }[] = [];
+    const outRange: { x: number; y: number }[] = [];
     for (const d of timeSeries) {
       if (
         typeof d.engineRpm !== "number" ||
@@ -36,14 +38,17 @@ export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
         d.engineRpm < 500
       )
         continue;
-      // VE = (MAF_kg_s × 120) / (RPM × displacement × airDensity) × 100
-      const mafKgS = d.mafAirFlowRate / 1000; // g/s → kg/s
+      const mafKgS = d.mafAirFlowRate / 1000;
       const ve = (mafKgS * 120) / (d.engineRpm * DISPLACEMENT_M3 * AIR_DENSITY) * 100;
-      xs.push(d.engineRpm);
-      ys.push(ve);
+      const point = { x: d.engineRpm, y: ve };
+      if (isRangeActive && (d.timestamp < timeRange.start! || d.timestamp > timeRange.end!)) {
+        outRange.push(point);
+      } else {
+        inRange.push(point);
+      }
     }
-    return { xs, ys };
-  }, [timeSeries]);
+    return { inRange, outRange };
+  }, [timeSeries, timeRange, isRangeActive]);
 
   const boostErrorValues = useMemo(
     () =>
@@ -111,12 +116,25 @@ export function CobbBoostTab({ timeSeries, stats }: CobbBoostTabProps) {
 
       {/* Chart 4: Volumetric Efficiency vs RPM */}
       <ChartWrapper title="Volumetric Efficiency vs RPM" height={280} tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.volumetricEfficiency} />}>
-        {veData.xs.length > 0 ? (
+        {veData.inRange.length > 0 || veData.outRange.length > 0 ? (
           <Plot
             data={[
+              ...(veData.outRange.length > 0
+                ? [
+                    {
+                      x: veData.outRange.map((p) => p.x),
+                      y: veData.outRange.map((p) => p.y),
+                      type: "scattergl" as const,
+                      mode: "markers" as const,
+                      marker: { color: CHART_COLORS.quaternary, size: 3, opacity: 0.15 },
+                      showlegend: false,
+                      hoverinfo: "skip" as const,
+                    },
+                  ]
+                : []),
               {
-                x: veData.xs,
-                y: veData.ys,
+                x: veData.inRange.map((p) => p.x),
+                y: veData.inRange.map((p) => p.y),
                 type: "scattergl" as const,
                 mode: "markers" as const,
                 marker: { color: CHART_COLORS.quaternary, size: 3, opacity: 0.6 },

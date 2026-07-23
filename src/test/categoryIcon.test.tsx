@@ -13,14 +13,16 @@ describe("CATEGORY_ORDER", () => {
     expect(CATEGORY_ORDER[0]).toBe("summary");
   });
 
-  it("has 11 categories total", () => {
-    expect(CATEGORY_ORDER.length).toBe(11);
+  it("has 19 categories total", () => {
+    expect(CATEGORY_ORDER.length).toBe(19);
   });
 
   it("includes all expected categories", () => {
     const expected = [
       "summary", "overview", "engine", "fuel", "transmission",
       "power", "drivingBehavior", "abs", "awd", "electrical", "airIntake",
+      "cobbEngine", "cobbBoost", "cobbAFR", "cobbPower", "cobbKnock",
+      "cobbWastegate", "cobbInjector", "cobbAVCS",
     ];
     expect([...CATEGORY_ORDER]).toEqual(expected);
   });

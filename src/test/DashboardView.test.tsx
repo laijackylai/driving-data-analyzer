@@ -68,7 +68,7 @@ const makeMockResult = (overrides?: object) => ({
     motion: {
       avgSpeed: 50,
       maxSpeed: 100,
-      totalDistance: 5,
+      totalDistance: 5 as number | null,
       durationSeconds: 60,
       durationMinutes: 1,
       harshBrakingEvents: 0,
@@ -115,6 +115,12 @@ const makeMockResult = (overrides?: object) => ({
     engineZones: [],
     awdEngagementEvents: [],
     fuelDistanceSeries: [],
+    thermalDelta: [],
+    torqueSplit: [],
+    ratioError: [],
+    torqueConverterSlip: [],
+    volumetricEfficiency: [],
+    stftStability: [],
   },
   thresholds: {
     engineRpm: { normal: [0, 6000], warning: [6000, 7000], danger: [7000, 10000] },
@@ -236,11 +242,23 @@ describe("DashboardView state machine", () => {
 
     render(<DashboardView />);
 
-    // Reach DASHBOARD state
+    // Reach DASHBOARD state. Checking only "landing-view"/"pixelize-effect-out"
+    // absence is ambiguous: both are equally true the instant the API resolves
+    // and viewState is still "analyzing" with the dashboard snapshot not yet
+    // captured (still rendering "pixelize-effect-in"). That let this waitFor
+    // resolve too early — before viewState had actually reached "dashboard" —
+    // so the subsequent home-button click could race the production
+    // DashboardView's in-flight 50ms snapshot-capture setTimeout, which could
+    // still fire after the click and intermittently interfere with the
+    // DASHBOARD -> LANDING transition. "dot-loader" only disappears once
+    // viewState genuinely leaves "analyzing" (it's rendered exclusively inside
+    // the `viewState === "analyzing"` branch), giving an unambiguous signal —
+    // the same combination already used successfully by the
+    // "clicking a tab button in DASHBOARD" test below.
     await user.click(screen.getByText("mock-upload"));
     await vi.waitFor(() => {
+      expect(screen.queryByTestId("dot-loader")).not.toBeInTheDocument();
       expect(screen.queryByTestId("landing-view")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("pixelize-effect-out")).not.toBeInTheDocument();
     });
 
     // Click the home button on the TimelineSlider

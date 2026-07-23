@@ -1,103 +1,130 @@
 "use client";
 
-import { OBD2DataPoint, DerivedMetrics, ThresholdConfig } from "@/types";
+import { useMemo } from "react";
+import { OBD2DataPoint, ThresholdConfig, TimeSeriesRow } from "@/types";
 import { ChartWrapper } from "@/components/ui/ChartWrapper";
 import { MetricTooltip } from "@/components/ui/MetricTooltip";
 import { TimeSeriesChart } from "@/components/features/charts/TimeSeriesChart";
 import { ScatterChart } from "@/components/features/charts/ScatterChart";
-import { BarChart } from "@/components/features/charts/BarChart";
-import { AreaChart } from "@/components/features/charts/AreaChart";
 import { CHART_COLORS } from "@/lib/chartTheme";
 import { METRIC_TOOLTIPS } from "@/lib/data/metricTooltips";
+import { computeSTFTStability } from "@/lib/data/deriveMetrics";
 
 /** Per-chart LTTB downsampling threshold for Fuel Trims (dual overlapping traces). */
 const FUEL_TRIM_MAX_POINTS = 2000;
 
 interface FuelTabProps {
   timeSeries: OBD2DataPoint[];
-  derived: DerivedMetrics;
   thresholds: ThresholdConfig;
 }
 
-export function FuelTab({ timeSeries, derived, thresholds }: FuelTabProps) {
+export function FuelTab({ timeSeries, thresholds }: FuelTabProps) {
   const startTime = timeSeries[0]?.timestamp ?? 0;
+
+  const fuelTrimStabilityData = useMemo(() => computeSTFTStability(timeSeries), [timeSeries]);
 
   return (
     <div className="space-y-4 pt-4">
-      {/* Fuel trims over time */}
+      {/* STFT + LTFT + Fuel Rate */}
       <ChartWrapper
-        title="Fuel Trims"
+        title="STFT + LTFT + Fuel Rate"
         height={280}
-        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.shortTermFuelTrim} />}
+        tooltipContent={
+          <MetricTooltip content={METRIC_TOOLTIPS.shortTermFuelTrim} />
+        }
       >
         <TimeSeriesChart
           data={timeSeries}
           traces={[
-            { field: "shortTermFuelTrim", name: "Short-term (%)", color: CHART_COLORS.primary },
-            { field: "longTermFuelTrim", name: "Long-term (%)", color: CHART_COLORS.amber, yaxis: "y2" },
+            {
+              field: "shortTermFuelTrim",
+              name: "STFT (%)",
+              color: CHART_COLORS.primary,
+            },
+            {
+              field: "longTermFuelTrim",
+              name: "LTFT (%)",
+              color: CHART_COLORS.amber,
+            },
+            {
+              field: "instantFuelRate",
+              name: "Fuel Rate (L/h)",
+              color: CHART_COLORS.secondary,
+              yaxis: "y2",
+            },
           ]}
           thresholdKey="shortTermFuelTrim"
           thresholds={thresholds}
-          yAxisLabel="Short-term %"
-          y2AxisLabel="Long-term %"
+          yAxisLabel="Fuel Trim %"
+          y2AxisLabel="Fuel Rate (L/h)"
           height={280}
           startTime={startTime}
           maxPoints={FUEL_TRIM_MAX_POINTS}
         />
       </ChartWrapper>
 
-      {/* Fuel/Air equivalence ratio */}
+      {/* Fuel Trim vs RPM scatter */}
       <ChartWrapper
-        title="Fuel/Air Equivalence Ratio"
+        title="Fuel Trim vs RPM"
+        height={280}
+        tooltipContent={
+          <MetricTooltip content={METRIC_TOOLTIPS.fuelTrimVsRpm} />
+        }
+      >
+        <ScatterChart
+          data={timeSeries}
+          xField="engineRpm"
+          yField="shortTermFuelTrim"
+          colorField="engineLoad"
+          xLabel="RPM"
+          yLabel="Short-term Fuel Trim (%)"
+          height={280}
+        />
+      </ChartWrapper>
+
+      {/* Fuel Trim Stability */}
+      <ChartWrapper
+        title="Fuel Trim Stability"
         height={250}
-        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.fuelAirRatio} />}
+        tooltipContent={
+          <MetricTooltip content={METRIC_TOOLTIPS.fuelTrimStability} />
+        }
       >
         <TimeSeriesChart
-          data={timeSeries}
-          traces={[{ field: "fuelAirRatio", name: "λ (lambda)", color: CHART_COLORS.secondary }]}
-          yAxisLabel="Equivalence Ratio"
+          data={fuelTrimStabilityData}
+          traces={[
+            {
+              field: "stftStdDev",
+              name: "STFT Std Dev",
+              color: CHART_COLORS.primary,
+            },
+          ]}
+          yAxisLabel="Std Dev (%)"
           height={250}
           startTime={startTime}
         />
       </ChartWrapper>
 
-      {/* Consumption vs speed scatter */}
+      {/* LTFT Drift */}
       <ChartWrapper
-        title="Fuel Consumption vs Speed"
-        height={280}
-        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.instantFuelRate} />}
+        title="LTFT Drift"
+        height={250}
+        tooltipContent={<MetricTooltip content={METRIC_TOOLTIPS.ltftDrift} />}
       >
-        <ScatterChart
+        <TimeSeriesChart
           data={timeSeries}
-          xField="vehicleSpeed"
-          yField="instantFuelRate"
-          colorField="engineLoad"
-          xLabel="Speed (km/h)"
-          yLabel="Fuel Rate (L/h)"
-          height={280}
-        />
-      </ChartWrapper>
-
-      {/* Consumption by speed bucket */}
-      <ChartWrapper title="Avg Fuel Consumption by Speed" height={250}>
-        <BarChart
-          data={derived.fuelBySpeedBucket.map((b) => ({
-            label: `${b.bucket} km/h`,
-            value: b.avgConsumption,
-            count: b.sampleCount,
-          }))}
-          yLabel="Avg Fuel Rate (L/h)"
+          traces={[
+            {
+              field: "longTermFuelTrim",
+              name: "LTFT (%)",
+              color: CHART_COLORS.primary,
+            },
+          ]}
+          thresholdKey="longTermFuelTrim"
+          thresholds={thresholds}
+          yAxisLabel="LTFT %"
           height={250}
-        />
-      </ChartWrapper>
-
-      {/* Cumulative fuel used */}
-      <ChartWrapper title="Cumulative Fuel Used vs Distance" height={250}>
-        <AreaChart
-          data={derived.fuelDistanceSeries.map((p) => ({ x: p.distance, y: p.fuel }))}
-          xLabel="Distance (km)"
-          yLabel="Fuel Used (L)"
-          height={250}
+          startTime={startTime}
         />
       </ChartWrapper>
     </div>

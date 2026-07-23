@@ -409,6 +409,30 @@ export interface AWDEngagementEvent {
   duration: number;
 }
 
+export interface ThermalDeltaPoint {
+  timestamp: number;
+  delta: number;       // oilTemp - coolantTemp
+  engineLoad?: number; // for overlay
+}
+
+export interface TorqueSplitPoint {
+  timestamp: number;
+  frontPct: number;
+  rearPct: number;
+}
+
+export interface RatioErrorPoint {
+  timestamp: number;
+  error: number;         // actual - target
+  throttle?: number;
+}
+
+export interface TorqueConverterSlipPoint {
+  timestamp: number;
+  slipPct: number;       // (1 - turbine/engine) × 100
+  lockUpDuty?: number;
+}
+
 export interface DerivedMetrics {
   wheelSpeedDiffs: WheelSpeedDiff[];
   cvtEffectiveRatio: CVTRatioPoint[];
@@ -416,6 +440,12 @@ export interface DerivedMetrics {
   engineZones: EngineZonePoint[];
   awdEngagementEvents: AWDEngagementEvent[];
   fuelDistanceSeries: { distance: number; fuel: number }[];
+  thermalDelta: ThermalDeltaPoint[];
+  torqueSplit: TorqueSplitPoint[];
+  ratioError: RatioErrorPoint[];
+  torqueConverterSlip: TorqueConverterSlipPoint[];
+  volumetricEfficiency: OBD2DataPoint[];
+  stftStability: TimeSeriesRow[];
 }
 
 // ── Thresholds ──
